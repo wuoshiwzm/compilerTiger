@@ -9,6 +9,7 @@
 /* This file is intentionally empty.  You should fill it in with your
    solution to the programming exercise. */
 
+// gcc -Wall -g  .\test_interp.c .\interp.c .\prog1.c .\slp.c .\util.c
 
 int main(){
     printf("calling main\n");
