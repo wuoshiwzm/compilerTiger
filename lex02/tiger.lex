@@ -11,11 +11,8 @@
 int charPos=1;
 
 // comment 字符串栈
-struct comment_stack{
-
-};
-char commonArr[] = {};
 char *stringBuff = "";
+char *commentBuff = "";
 
 
 /**
@@ -103,12 +100,12 @@ nil             {adjust();return NIL;}
 
 
 
-// 注释开始   /*   注释栈 push 注释内容
-/\*            {adjust();  BEGIN(COMMENT_START);}
+// 注释开始   /*   commentBuff 开始写入
+/\*          {adjust();  BEGIN(COMMENT_START);}
 
 
-// 注释结束   */   注释栈 pop
-*/              {adjust(); BEGIN(COMMENT_END);}
+// 注释结束   */    
+\*/              {adjust(); BEGIN(COMMENT_END);}
 
 // 字符串开始或结束
 \"             {adjust(); BEGIN(STRING_TAG}
