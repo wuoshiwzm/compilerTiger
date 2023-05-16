@@ -1,0 +1,12 @@
+makefile 实际运行命令
+
+gcc -g -c util.c
+flex tiger.lex
+gcc -g -c lex.yy.c
+gcc -g -c errormsg.c
+gcc -g -c driver.c
+gcc -g -o lextest driver.o lex.yy.o errormsg.o util.o
+lextest.exe ./testcases/test7.tig
+lextest.exe ./testcases/test44.tig
+
+
