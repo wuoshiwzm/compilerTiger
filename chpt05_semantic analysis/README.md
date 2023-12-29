@@ -1,4 +1,9 @@
-第五章 语义分析
+# 第五章 语义分析
+
+
+### https://rebelsky.cs.grinnell.edu/Courses/CS362/98F/Outlines/outline.26.html
+### https://github.com/oyzh/tiger/blob/master/chap5/semant.c
+### https://www.lrde.epita.fr/~tiger/tc-doc/classtype_1_1Record.html
 
 # 语义分析，类型检查
 ```
