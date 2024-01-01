@@ -22,7 +22,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v);
 static struct expty transExp(S_table venv, S_table tenv, A_exp e);
 
 /* 核心函数，类型检查 */
-void SEM_transProg(A_exp exp)
+void SEM_transProg(A_exp exp);
 
 
 
@@ -68,10 +68,44 @@ union {S_symbol simple; // 简单变量的符号
 /* 获取 ty 的原生类型 */
 static Ty_ty actual_ty(Ty_ty ty){
     if(!ty) return ty;
-    //  ty->kind == Ty_name 说明是重命名后的 type
-    if(ty->kind == Ty_name) return actual_ty(ty->u.name.ty)
+    // ty->kind == Ty_name 说明 ty 的类型名是是重命名后的，如： a:int , b: string  等
+    if(ty->kind == Ty_name) return actual_ty(ty->u.name.ty);
     else return ty;
 }
+
+
+/**
+ * @brief 判断形参是否符合 函数 fun 的定义
+ * 
+ * @param ell 
+ * @param fll 
+ * @param fun 
+ * @param tt 
+ * @param v 
+ * 
+ * @return 
+ */
+static bool args_match(S_table v, S_table tt, A_expList ell, Ty_tyList fll, A_exp fun){
+	/* 表达式类型	*/
+	struct expty et;
+	A_expList el = ell;
+	Ty_tyList fl = fll;
+	
+	/* 当函数即有表达式， 且有参数 */
+	while(el && fl){
+        /* 转义函数表达式 第一个 */
+        et = transExp(v, tt, el->head);
+
+        /* 判断表达式实参 el->head 类型 与 定义的形参 fl->head 的类型是否一样, 即 fun(x,y) 与 fun(int a, int b) 定义的类型是否匹配 */
+        if(!ty_match(et.ty, fl->head)){
+
+        }
+		
+	}
+	
+	return TRUE;
+}
+
 
 
 /* 解析变量的类型 */
@@ -90,7 +124,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v){
             x = S_look(venv, v->u.simple);
 
             /* 符号 */
-            if(v_val && x != E_varEntry){
+            if(x && x->kind != E_varEntry){
 
                 /*
                  值环境中不存在
@@ -120,7 +154,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v){
         case A_fieldVar :
 
             /* 拿到 a.b 对应的类型，则应该走 simpleVar 分支，为 record 类型，*/
-            struct expty et = transVar(venv, tenv, v->u.field.var);
+            et = transVar(venv, tenv, v->u.field.var);
 
             /* 在 {hd: int, tl: intlist} 中 找hd 对应的类型 */
             Ty_ty basety = actual_ty(et.ty);
@@ -129,7 +163,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v){
             if(basety->kind != Ty_record){
                 /* 域变量，其类型应该是 Ty_record */
                 EM_error(v->pos, " it is field var, but not a record type." );
-                return expTy(null, Ty_Record(NULL));
+                return expTy(NULL, Ty_Record(NULL));
             }
 
             /* 遍历当前的 Ty_record 环境 的所有 field , 找到v的符号( hd )对应的那个field: {hd: int}
@@ -155,7 +189,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v){
         case A_subscriptVar:
 
             /* 获取数组 arr */
-            struct expty et = transVar(venv, tenv, v->u.subscript.var);
+            et = transVar(venv, tenv, v->u.subscript.var);
 
             if( actual_ty(et.ty)->kind != Ty_array){
                 EM_error(v->pos, "it is not a array");
@@ -172,5 +206,93 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v){
     }
 }
 
+/*
+	struct A_exp_
+	{
 
+enum {A_varExp, A_nilExp, A_intExp, A_stringExp, A_callExp,
+	A_opExp, A_recordExp, A_seqExp, A_assignExp, A_ifExp,
+	A_whileExp, A_forExp, A_breakExp, A_letExp, A_arrayExp} kind;
+	A_pos pos;
+	union {
 
+	A_var var;
+	
+	// nil; - needs only the pos 
+	
+	int intt;
+	string stringg;
+	struct {S_symbol func; A_expList args;} call;
+	struct {A_oper oper; A_exp left; A_exp right;} op;
+	struct {S_symbol typ; A_efieldList fields;} record;
+	A_expList seq;
+	struct {A_var var; A_exp exp;} assign;
+	struct {A_exp test, then, elsee;} iff; 
+	
+	
+	// elsee is optional
+	
+	struct {A_exp test, body;} whilee;
+	struct {S_symbol var; A_exp lo,hi,body; bool escape;} forr;
+	
+	
+	// breakk; - need only the pos
+	
+	struct {A_decList decs; A_exp body;} let;
+	struct {S_symbol typ; A_exp size, init;} array;
+	} u;
+	};  
+	
+	*/
+
+/* 解析表达式类型 */
+static struct expty transExp(S_table v, S_table t, A_exp e){
+	
+	
+	A_oper oper;
+
+	
+	
+	switch (e->kind) {
+	case A_VarExp: 
+		/* 变量表达式 */
+		return transVar(v, t, e->u.var);
+		break;
+	case A_NilExp:
+		/* NIL 表达式 */
+		return expTy(NULL, Ty_Nil());
+		break;
+		
+		
+	case A_CallExp:
+		/* 调用表达式 */
+
+		/* 获取调用信息 在value env 值环境中中查找调用的 参数，返回值 */
+		callval = S_look(v,e);
+
+		/* 表达式为函数名时 */
+		if(callval && callval->u.kind == E_FunEntry){
+			
+			/*  */
+			if(args_match()){
+				//TODO
+			}
+			
+			
+		}
+		
+		
+		
+		
+		break;
+	default:
+		//TODO
+		break;
+	}
+	
+	
+	
+	
+	
+	
+}
