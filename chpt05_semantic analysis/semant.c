@@ -602,8 +602,6 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
             /* 应该走不到这里，否则就是漏掉的类型 */
             assert(0);
     }
-
-
 }
 
 
