@@ -40,7 +40,7 @@ struct A_var_
       };
 
 struct A_exp_
-      {enum {A_varExp, A_nilExp, A_intExp, A_stringExp, A_callExp,
+      {enum {A_varExp, A_nilExp, A_intExp, A_doubleExp, A_stringExp, A_callExp,
 	       A_opExp, A_recordExp, A_seqExp, A_assignExp, A_ifExp,
 	       A_whileExp, A_forExp, A_breakExp, A_letExp, A_arrayExp} kind;
        A_pos pos;
