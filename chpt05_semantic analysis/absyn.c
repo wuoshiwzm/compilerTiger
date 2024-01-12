@@ -11,6 +11,7 @@
     Ty_record 则是一种类型的抽象 是 Ty_ty { TyfieldList } tyfield ->{name : ty_string, age: ty_int }
  */
 
+#include <stdio.h>
 #include "util.h"
 #include "symbol.h" /* symbol table data structures */
 #include "absyn.h"  /* abstract syntax data structures */
@@ -24,7 +25,7 @@ A_var A_SimpleVar(A_pos pos, S_symbol sym)
  return p;
 }
 
-/* 域 () */
+/* 域变量 a.b */
 A_var A_FieldVar(A_pos pos, A_var var, S_symbol sym)
 {A_var p = checked_malloc(sizeof(*p));
  p->kind=A_fieldVar;
