@@ -7,8 +7,7 @@
 #include "types.h"
 #include "env.h"
 
-
-// 变量环境 可以添加到外层的 类型 环境中 
+/* 变量类型环境对象 可以添加到外层的 类型 环境中 */
 E_enventry E_VarEntry(Ty_ty ty){
     E_enventry venv;
     venv = checked_malloc(sizeof(*venv));
@@ -17,7 +16,7 @@ E_enventry E_VarEntry(Ty_ty ty){
     return venv;
 }
 
-// 生成一个函数环境，可以添加到外层的 值 环境中 
+/* 生成一个函数环境对象，可以添加到外层的 值 环境中 */
 E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result){
     E_enventry  fenv;
     fenv = checked_malloc(sizeof(*fenv));
@@ -29,9 +28,9 @@ E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result){
     return fenv;
 }
 
-// 初始化类型环境 Ty_ ty environment 的符号表
+/* 初始化类型环境 Ty_ ty environment 的符号表 */
 S_table E_base_tenv(void){
-    // 初始化一个空符号表
+    /* 初始化一个空符号表 */
     S_table init_t = S_empty();
     S_enter(init_t, S_Symbol("int"), Ty_Int());
     S_enter(init_t, S_Symbol("string"), Ty_String());
@@ -57,15 +56,15 @@ S_table E_base_venv(void){
         Print s on standard output.
     */
     S_enter(
-        t, 
-        S_Symbol("print"), 
-        // E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result)
-        // Ty_tyList Ty_TyList(Ty_ty head, Ty_tyList tail)
-        /**
-        形参类型： Ty_TyList()
-        返回值类型：  Ty_void()
-        */
-        E_FunEntry(Ty_TyList(Ty_String(), NULL), Ty_void())
+            t,
+            S_Symbol("print"),
+            // E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result)
+            // Ty_tyList Ty_TyList(Ty_ty head, Ty_tyList tail)
+            /**
+                形参类型： Ty_TyList()
+                返回值类型：  Ty_void()
+            */
+            E_FunEntry(Ty_TyList(Ty_String(), NULL), Ty_Void())
         );
 
     /*
@@ -75,7 +74,7 @@ S_table E_base_venv(void){
     S_enter(
         t, 
         S_Symbol("flush"), 
-        E_FunEntry(NULL, Ty_void())
+        E_FunEntry(NULL, Ty_Void())
         );
 
     /*
