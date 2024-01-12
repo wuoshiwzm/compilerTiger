@@ -3,35 +3,35 @@
 #include "util.h"
 #include "symbol.h"
 #include "absyn.h"
-#include "y.tab.h"
+#include "tiger.tab.h"
 #include "errormsg.h"
 
 #define MAXLEN 1024
-
+  
 int charPos=1;
 /*The returned string is not in a unique memory.So when next string coming ,the last one will drop. Compiler's next step should save the string.*/
 char str[MAXLEN];
 int iden;
 void addchar(char c){
-    str[iden++] = c;
+  str[iden++] = c;
 }
 void addstr(string s,int n){
-    int i = 0;
-    while(i < n)
-        str[iden++] = s[i++];
+  int i = 0;
+  while(i < n)
+    str[iden++] = s[i++];
 }
-
+ 
 int yywrap(void)
 {
-    charPos=1;
-    return 1;
+ charPos=1;
+ return 1;
 }
 
 
 void adjust(void)
 {
-    EM_tokPos=charPos;
-    charPos+=yyleng;
+ EM_tokPos=charPos;
+ charPos+=yyleng;
 }
 
 %}
