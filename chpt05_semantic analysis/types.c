@@ -10,11 +10,11 @@
 #include "symbol.h"
 #include "types.h"
 
-// 空 type
+/* 空 type */
 static struct Ty_ty_ tynil = {Ty_nil};
 Ty_ty Ty_Nil(void) {return &tynil;}
 
-// int type
+/* int type */
 static struct Ty_ty_ tyint = {Ty_int};
 Ty_ty Ty_Int(void) {return &tyint;}
 
@@ -27,7 +27,7 @@ Ty_ty Ty_Double(void){return &tydouble;}
 static struct Ty_ty_ tyvoid = {Ty_void};
 Ty_ty Ty_Void(void) {return &tyvoid;}
 
-// 将类型域 fields 添加到环境中
+/* 将类型域 fields 添加到环境中 */
 Ty_ty Ty_Record(Ty_fieldList fields)
 {Ty_ty p = checked_malloc(sizeof(*p));
  p->kind=Ty_record;
