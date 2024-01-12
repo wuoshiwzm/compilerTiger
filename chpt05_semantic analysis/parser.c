@@ -34,8 +34,6 @@ int main(int argc, char **argv) {
 	}
 	A_exp temp = parse(argv[1]);
 	if (temp) {
-		//pr_exp(stdout, temp, 4);
-		//printf("\n-------------------------\n");
 		SEM_transProg(temp);
 	}
 	return 0;
