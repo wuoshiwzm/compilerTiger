@@ -8,7 +8,7 @@
 #include "symbol.h"
 #include "absyn.h"
 #include "errormsg.h"
-#include "parse.h"
+#include "parser.h"
 #include "prabsyn.h"
 #include "semant.h"
 
