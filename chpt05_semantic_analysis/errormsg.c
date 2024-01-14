@@ -65,3 +65,23 @@ void EM_reset(string fname)
 	yyin = fopen(fname,"r");
 	if (!yyin) {EM_error(0,"cannot open"); exit(1);}
 }
+
+void EM_pfun(int pos, char *message,...)
+{
+    va_list ap;
+    IntList lines = linePos;
+    int num=lineNum;
+
+
+    anyErrors=TRUE;
+    while (lines && lines->i >= pos) {
+        lines=lines->rest; num--;
+    }
+
+    if (fileName) fprintf(stderr,"%s:",fileName);
+    if (lines) fprintf(stderr,"%d.%d: ", num, pos-lines->i);
+    va_start(ap,message);
+    vfprintf(stderr, message, ap);
+    va_end(ap);
+    fprintf(stderr,"\n");
+}

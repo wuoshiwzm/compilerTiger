@@ -9,6 +9,7 @@ del *.o
 del lex.yy.c
 del *.tab.*
 del a.out
+del a.exe
 
 gcc -g -c util.c
 flex tiger.lex
@@ -37,7 +38,7 @@ echo "testing test file ..."
 set "folder_path=.\testfiles"
 
 for /R "%folder_path%" %%F in (*.tig) do (
-    set "FILE_NAME=%%F"
+    echo "testing file now :::"
     echo %%F
     a.exe %%F
 )

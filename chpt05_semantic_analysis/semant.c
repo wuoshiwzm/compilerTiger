@@ -347,6 +347,8 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
  */
 static struct expty transExp(S_table v, S_table t, A_exp e) {
 
+    EM_pfun(e->pos,"====> transExp\n");
+
     E_enventry callinfo; /* 函数调用: funx(a,b) */
     Ty_ty recordty, arrayty;
     A_expList list;
@@ -624,6 +626,9 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
  */
 /* 转义声明表达式 */
 static void transDec(S_table v, S_table t, A_dec d) {
+
+    printf("trans dec expression...");
+
     struct expty e;
     Ty_ty dec_ty;
 
@@ -641,6 +646,7 @@ static void transDec(S_table v, S_table t, A_dec d) {
     /* 类型声明 */
     A_nametyList nl;
     Ty_ty resTy, namety;
+    bool useUndefype;
 
     switch (d->kind) {
 
@@ -734,6 +740,9 @@ static void transDec(S_table v, S_table t, A_dec d) {
             break;
 
         case A_typeDec: /* 声明自定义类型 */
+
+            printf("jump orver typedec.............. \n");
+            break;
             /*     类型定义
                type type-id = typee
                typee:
@@ -746,7 +755,6 @@ static void transDec(S_table v, S_table t, A_dec d) {
                 type arrtype = array of int (数组的个数不限制)
                 var row := arrtype[10] of 0
                 var row2 := arrtype[11] of 1 */
-
 
             /* 将多个类型声明的每一段 (nl->head) 添加进全局的 类型环境 t , */
             for (nl = d->u.type; nl; nl = nl->tail) {
@@ -766,7 +774,7 @@ static void transDec(S_table v, S_table t, A_dec d) {
                 /* 如果某一条声明语句对应的类型名字不存在，说明这种类型还没有声明，不能用它来声明新的类型
                  * 如   a: intt,  这里的 intt 应该已经声明过新类型名， 否则intt 不是Ty_name*/
                 if (resTy->kind != Ty_name) {
-                    EM_error(d->pos, " use undefined type.");
+                    EM_error(d->pos, " use undefined type: %s", S_name(resTy->u.name.sym));
                 }
 
                 /* 类型环境中查找 声明名字 a (符号) 对应的类型 */
@@ -777,6 +785,7 @@ static void transDec(S_table v, S_table t, A_dec d) {
             break;
 
         default:
+            printf("default of transDec");
             assert(0);
     }
 }
