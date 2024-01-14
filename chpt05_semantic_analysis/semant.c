@@ -367,16 +367,18 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
 
         /* 变量表达式 */
         case A_varExp:
+            EM_pfun(e->pos,"====> A_varExp\n");
             return transVar(v, t, e->u.var);
-
 
             /* NIL 表达式 */
         case A_nilExp:
+            EM_pfun(e->pos,"====> A_nilExp\n");
             return expTy(NULL, Ty_Nil());
 
 
             /* 调用表达式 */
         case A_callExp:
+            EM_pfun(e->pos,"====> A_callExp\n");
             /* 获取调用信息 在值环境 v 中查找函数 func 的参数，返回值 */
             callinfo = S_look(v, e->u.call.func);
 
@@ -402,6 +404,8 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
 
             /* record 表达式 */
         case A_recordExp:
+            EM_pfun(e->pos,"====> A_recordExp\n");
+
             /* 在类型环境 tenv 中查找符号 e->u.record.typ 绑定的类型  */
             recordty = actual_ty(S_look(t, e->u.record.typ));
 
@@ -420,6 +424,8 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
             return expTy(NULL, Ty_Record(NULL));
 
         case A_arrayExp:
+            EM_pfun(e->pos,"====> A_arrayExp\n");
+
             arrayty = actual_ty(S_look(t, e->u.array.typ));
 
             if ((!arrayty) || (arrayty->kind != Ty_array)) {
@@ -441,6 +447,8 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
 
             /* 表达式列表：按每一个表达式转义 */
         case A_seqExp:
+            EM_pfun(e->pos,"====> A_seqExp\n");
+
             list = e->u.seq;
 
             if (!list) {
@@ -457,6 +465,8 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
             /* while 表达式 */
         case A_whileExp:
 
+            EM_pfun(e->pos,"====> A_whileExp\n");
+
             /* while() 中止条件判断，应该是 int (0, 1) */
             final = transExp(v, t, e->u.whilee.test);
             if (final.ty->kind != Ty_int) {
@@ -470,6 +480,9 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
 
             /* 赋值表达式  var := exp */
         case A_assignExp:
+
+            EM_pfun(e->pos,"====> A_assignExp\n");
+
             assVar = transVar(v, t, e->u.assign.var);
             assExp = transExp(v, t, e->u.assign.exp);
 
@@ -483,11 +496,17 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
 
             /* break表达式 */
         case A_breakExp:
+
+            EM_pfun(e->pos,"====> A_breakExp\n");
+
             return expTy(NULL, Ty_Void());
 
 
             /* for表达式 */
         case A_forExp:
+
+            EM_pfun(e->pos,"====> A_forExp\n");
+
             /* struct {S_symbol var; A_exp lo,hi,body; bool escape;} forr; */
             for_from = transExp(v, t, e->u.forr.lo);
             for_to = transExp(v, t, e->u.forr.hi);
@@ -511,6 +530,8 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
              * let ...decs... in ...exp_body... end */
         case A_letExp:
 
+            EM_pfun(e->pos,"====> A_letExp\n");
+
             /* 声明只在域scope内有效 */
             S_beginScope(v);
             S_beginScope(t);
@@ -531,6 +552,8 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
              typedef enum {A_plusOp, A_minusOp, A_timesOp, A_divideOp,
              A_eqOp, A_neqOp, A_ltOp, A_leOp, A_gtOp, A_geOp} A_oper; */
         case A_opExp:
+
+            EM_pfun(e->pos,"====> A_opExp\n");
 
             op = e->u.op.oper;  /* 符号 */
             left = transExp(v, t, e->u.op.left);
@@ -582,6 +605,9 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
 
             /* if表达式 */
         case A_ifExp:
+
+            EM_pfun(e->pos,"====> A_ifExp \n");
+
             if_if = transExp(v, t, e->u.iff.test);
             if_then = transExp(v, t, e->u.iff.then);
 
@@ -627,7 +653,7 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
 /* 转义声明表达式 */
 static void transDec(S_table v, S_table t, A_dec d) {
 
-    printf("trans dec expression...");
+    EM_pfun(d->pos,"====> transDec\n");
 
     struct expty e;
     Ty_ty dec_ty;

@@ -1,2 +1,9 @@
 .git/
 .idea/
+tiger.output
+tiger.tab.*
+*.o
+lex.yy.c
+*.tab.*
+a.out
+a.exe
