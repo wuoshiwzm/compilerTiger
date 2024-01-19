@@ -7,27 +7,6 @@
 #include "types.h"
 #include "env.h"
 
-/* 变量类型环境对象 可以添加到外层的 类型 环境中 */
-E_enventry E_VarEntry(Ty_ty ty){
-    E_enventry venv;
-    venv = checked_malloc(sizeof(*venv));
-    venv->kind = E_varEntry;
-    venv->u.var.ty = ty;
-    return venv;
-}
-
-/* 生成一个函数环境对象，可以添加到外层的 值 环境中 */
-E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result){
-    E_enventry  fenv;
-    fenv = checked_malloc(sizeof(*fenv));
-
-    fenv->kind = E_funEntry;
-    fenv->u.fun.formals = formals;
-    fenv->u.fun.result = result;
-
-    return fenv;
-}
-
 /* 初始化类型环境 Ty_ ty environment 的符号表 */
 S_table E_base_tenv(void){
     /* 初始化一个空符号表 */
@@ -39,43 +18,38 @@ S_table E_base_tenv(void){
 }
 
 
-/**
-将符号 sym 添加到符号表 t 中
-void S_enter(S_table t, S_symbol sym, void *value)
-*/
-
 /*
-初始化值环境 val environment 的符号表
+初始化全局值环境 val environment 的符号表
 初始化时全局只有 tiger 的标准函数 在值环境中 
 */ 
-S_table E_base_venv(void){
-    S_table t = S_empty();
+S_table E_base_venv(void) {
+	S_table t = S_empty();
 
     /*
     function print(s : string)
         Print s on standard output.
     */
-    S_enter(
-            t,
-            S_Symbol("print"),
-            // E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result)
-            // Ty_tyList Ty_TyList(Ty_ty head, Ty_tyList tail)
+	S_enter(
+    t,
+    S_Symbol("print"),
+            /* E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result) */
+            /* Ty_tyList Ty_TyList(Ty_ty head, Ty_tyList tail) */
             /**
                 形参类型： Ty_TyList()
                 返回值类型：  Ty_void()
             */
-            E_FunEntry(Ty_TyList(Ty_String(), NULL), Ty_Void())
-        );
+    E_FunEntry(Ty_TyList(Ty_String(), NULL), Ty_Void())
+	);
 
     /*
     function flush()
         Flush the standard output buffer.
     */
-    S_enter(
-        t, 
-        S_Symbol("flush"), 
-        E_FunEntry(NULL, Ty_Void())
-        );
+  	S_enter(
+    t,
+    S_Symbol("flush"),
+    E_FunEntry(NULL, Ty_Void())
+  	);
 
     /*
     function getchar() : string
@@ -94,10 +68,8 @@ S_table E_base_venv(void){
     S_enter(
         t,
         S_Symbol("ord"),
-        E_FunEntry(
-            Ty_TyList(Ty_String(), NULL), 
-            Ty_Int()
-            )
+		E_FunEntry(Ty_TyList(Ty_String(), NULL), Ty_Int())
+
     );
 
     /*
@@ -107,11 +79,8 @@ S_table E_base_venv(void){
     S_enter(
         t,
         S_Symbol("chr"),
-        E_FunEntry(
-            Ty_TyList(Ty_Int(), NULL), 
-            Ty_String()
-            )
-    );
+        E_FunEntry(Ty_TyList(Ty_Int(), NULL), Ty_String())    
+		);
 
     /*
     function size(s: string) : int
@@ -120,11 +89,8 @@ S_table E_base_venv(void){
     S_enter(
         t,
         S_Symbol("size"),
-        E_FunEntry(
-            Ty_TyList(Ty_String(), NULL), 
-            Ty_Int()
-            )
-    );
+        E_FunEntry(Ty_TyList(Ty_String(), NULL), Ty_Int())    
+		);
 
     /*
     function substring(s:string, first:int, n:int) : string
@@ -133,10 +99,10 @@ S_table E_base_venv(void){
     S_enter(
         t,
         S_Symbol("substring"),
-        E_FunEntry(
-            Ty_TyList(Ty_String(), Ty_TyList(Ty_Int(), Ty_TyList(Ty_Int(), NULL))), 
-            Ty_String()
-            )
+        E_FunEntry(Ty_TyList(Ty_String(), 
+                         Ty_TyList(Ty_Int(), 
+						 Ty_TyList(Ty_Int(), NULL))), 
+            		Ty_String())
     );
 
     /*
@@ -146,10 +112,9 @@ S_table E_base_venv(void){
     S_enter(
         t,
         S_Symbol("concat"),
-        E_FunEntry(
-            Ty_TyList(Ty_String(), Ty_TyList(Ty_String(), NULL)), 
-            Ty_String()
-            )
+        E_FunEntry(Ty_TyList(Ty_String(),
+		Ty_TyList(Ty_String(), NULL)), 
+            Ty_String())
     );    
 
 
@@ -160,11 +125,8 @@ S_table E_base_venv(void){
     S_enter(
         t,
         S_Symbol("not"),
-        E_FunEntry(
-            Ty_TyList(Ty_Int(), NULL), 
-            Ty_Int()
-            )
-    ); 
+		E_FunEntry(Ty_TyList(Ty_Int(), NULL), Ty_Int())    
+		); 
 
     /*
     function exit(i: int)
@@ -173,12 +135,27 @@ S_table E_base_venv(void){
     S_enter(
         t,
         S_Symbol("exit"),
-        E_FunEntry(
-            Ty_TyList(Ty_Int(), NULL), 
-            Ty_Void()
-            )
-    ); 
-
-
+        E_FunEntry(Ty_TyList(Ty_Int(), NULL),Ty_Void())    
+		); 
+	return t;
+}
+		
+/* 变量类型环境对象 可以添加到外层的 类型 环境中 */
+E_enventry E_VarEntry(Ty_ty ty){
+    E_enventry venv;
+    venv = checked_malloc(sizeof(*venv));
+    venv->kind = E_varEntry;
+    venv->u.var.ty = ty;
+    return venv;
 }
 
+/* 生成一个函数环境对象，可以添加到外层的 值 环境中 */
+E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result){
+    E_enventry fenv = checked_malloc(sizeof(*fenv));
+
+    fenv->kind = E_funEntry;
+    fenv->u.fun.formals = formals;
+    fenv->u.fun.result = result;
+
+    return fenv;
+}
