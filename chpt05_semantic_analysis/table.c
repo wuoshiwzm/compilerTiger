@@ -26,7 +26,7 @@ struct binder_ {
  * top: 表顶的 *key
  */
 struct TAB_table_{
-    binder table[TABSIZE]; // 名为 table 的数组,元素类型为 binder
+    binder table[TABSIZE]; /* 名为 table 的数组,元素类型为 binder */
     void *top;
 };
 
@@ -50,11 +50,13 @@ static binder Binder(void *key, void *value, binder next, void *prevtop){
 }
 
 /* 空符号表 构造函数 */
-TAB_table TAB_empty(void){
+TAB_table TAB_empty(void)
+{
     TAB_table t = checked_malloc(sizeof(*t));
-    t->top = NULL;
     int i;
-    for (int i = 0; i < TABSIZE; i++) {
+    t->top = NULL;
+
+    for (i = 0; i < TABSIZE; i++) {
         t->table[i] = NULL;
     }
     return t;
@@ -89,7 +91,8 @@ void TAB_enter(TAB_table t, void *key, void *value) {
  * @param key
  * @return
  */
-void *TAB_look(TAB_table t, void *key) {
+void *TAB_look(TAB_table t, void *key) 
+{
     int index;
     binder b;
     assert(t && key);
@@ -117,12 +120,13 @@ void *TAB_pop(TAB_table t) {
     assert(topkey);
 
     /* 获取top 的 key 对应的 index */
-    int topkeyIndex = ((unsigned)topkey) % TABSIZE;
-    b = t->table[topkeyIndex];
+    index = ((unsigned)topkey) % TABSIZE;
+    b = t->table[index];
     assert(b);
 
     /* 将 b 的上一个 binder 替换为当前的 binder */
     t->table[index] = b->next;
+	t->top=b->prevtop;
     return b->key;
 }
 
@@ -149,20 +153,12 @@ void  TAB_dump(TAB_table t, void(*show)(void *key, void *value)){
     show(b->key, b->value);
     /* 递归执行 */
     TAB_dump(t, show);
+	assert(t->top == b->prevtop && t->table[index]==b->next);
 
     /* 对 key　对应的 binder 都遍历完了 回复 table 的 top 的 table[index] 对应的 binder */
     t->top = topKey;
     t->table[index] = b;
 }
-
-
-/* 展示所有的类型环境 */
-//void TAB_show_tenv(TAB_table){
-//    if(!t) {
-//        printf("empty table");
-//        return;
-//    }
-//}
 
 
 
