@@ -1,0 +1,71 @@
+let
+  type person = {name: string, age: int}
+  var p1 := person {name="Joe", age=66}
+  var p2: person := nil
+in
+  print(p1.name);
+end
+
+/*
+
+ letExp (
+     decList(
+         /* 新建类型 type person = {name: string, age: int} */
+         typeDec(
+             nametyList(
+                 namety(
+                     person,
+                     recordTy(
+                     fieldList(
+                             field(name, string, TRUE),
+
+                             fieldList (
+                                 field(age, int, TRUE),
+                                 fieldList() )
+                             )
+                     )
+                 ),
+                 nametyList()
+             )
+         ),
+
+         decList (
+                 /* 声明 record 给变量 p1, var p1 := person {name="Joe", age=66} */
+             varDec(
+                 p1,
+                 recordExp(
+                    person,
+                    efieldList(
+                        efield(name, stringExp(Joe)),
+                        efieldList(
+                            efield(age, intExp(66)),
+                            efieldList()
+                        )
+                    )
+                 ),
+                 TRUE),
+
+             decList (
+                 /* 声明 record 给变量 p2, var p2: person := nil */
+                 varDec(p2, person, nilExp(), TRUE),
+                 decList()
+             )
+         )
+     ),
+
+     /* 执行部分 */
+     seqExp(
+             expList(
+                 /* print(p1.name); */
+                 callExp(
+                     print,
+                     expList(
+                         /* 变量 p1.name */
+                         varExp( fieldVar( simpleVar(p),name)),
+                         expList())
+                 ),
+                 expList()
+     ))
+ )
+
+ */
