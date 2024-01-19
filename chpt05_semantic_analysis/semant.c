@@ -45,9 +45,6 @@
                     exps...
                 end
 
-
-
-
 */
 #include <stdio.h>
 #include "util.h"
@@ -58,48 +55,6 @@
 #include "translate.h"
 #include "env.h"
 #include "semant.h"
-
-/*
- struct E_enventry_ {
-    enum {E_varEntry, E_funEntry} kind;
-    union {
-        struct {Ty_ty ty;} var;
-        struct {Ty_tyList formals; Ty_ty result;} fun;
-    } u;
- };
- */
-
-/*
- struct A_var_
-   {enum {A_simpleVar, A_fieldVar, A_subscriptVar} kind;
-    A_pos pos;
-union {S_symbol simple; // 简单变量的符号
-       struct {A_var var;
-           S_symbol sym;} field;
-       struct {A_var var;
-           A_exp exp;} subscript;
-     } u;
-  };
- */
-
-/* struct Ty_ty_ {
-    enum {
-        // 基础类型
-        Ty_record, Ty_nil, Ty_int, Ty_string, Ty_array, Ty_name, Ty_void, Ty_double
-    } kind;
-    union {
-        Ty_fieldList record;
-        Ty_ty array;
-        struct {
-            S_symbol sym;
-            Ty_ty ty;
-        } name;
-    } u;
-}; */
-
-/*
- * 函数体声明
- */
 
 /* 将变量 转义成表达式类型 */
 static struct expty transVar(S_table venv, S_table tenv, A_var v);
@@ -129,12 +84,18 @@ void SEM_transProg(A_exp exp) {
     S_table t = E_base_tenv(); /* 类型环境 */
     S_table v = E_base_venv(); /* 值环境 */
     et = transExp(v, t, exp);
-    printf("@this expr return %d \n", et.ty->kind);
+    printf("============================= done =============================...");
+
+    /* 基础类型 */
+//    string* enums[16] = {"Ty_record", "Ty_nil", "Ty_int", "Ty_string", "Ty_array", "Ty_name", "Ty_void", "Ty_double"};
+//    printf("@this expr return %s \n", enums[et.ty->kind]);
 }
 
 /* 获取 ty 的原生类型 */
 static Ty_ty actual_ty(Ty_ty ty) {
+
     if (!ty) return ty;
+
     /* ty->kind == Ty_name 说明 ty 的类型名是是重命名后的，如： a:int , b: string  等 */
     if (ty->kind == Ty_name) return actual_ty(ty->u.name.ty);
     else return ty;
@@ -233,6 +194,15 @@ static bool efields_match(S_table v, S_table t, Ty_ty tyy, A_exp e) {
     }
 
     /* ty 和 fl 有一个不是NULL, 说明个数不匹配 */
+	
+	if (ty && !fl) {
+		EM_error(e->pos, "less fields in %s", S_name(e->u.record.typ));
+
+	} else if (!ty && fl) {
+		EM_error(e->pos, "too many field in %s", S_name(e->u.record.typ));
+	
+	}
+	
     if (ty || fl) {
         EM_error(e->pos, "the records define un match, either one of them is none.");
         return FALSE;
@@ -241,7 +211,7 @@ static bool efields_match(S_table v, S_table t, Ty_ty tyy, A_exp e) {
 }
 
 /* 解析变量的类型 */
-static struct expty transVar(S_table venv, S_table tenv, A_var v) {
+static struct expty transVar(S_table venv, S_table tenv, A_var v){
 
     /* 声明 环境， 类型变量， 域链表变量 */
     E_enventry x; /* 环境 */
@@ -255,28 +225,30 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
             /* 全局符号表 t 中查找符号 sym,返回绑定的 value.  v->u.simple: 简单变量的符号 */
             x = S_look(venv, v->u.simple);
 
-            /* 符号 */
-            if (x && x->kind != E_varEntry) {
+            if(x == NULL){
+                printf(" opps, S_look find no defined type for var : %s \n.", S_name(v->u.simple));
+            }
 
+
+            /* 符号 */
+            if (x && x->kind == E_varEntry) {
+				/*
+                 返回一个转义的表达式的对象 expty {Tr_exp exp; Ty_ty ty;}
+                 属性为表达式 Tr_exp exp 和 对应的类型 Ty_ty ty
+                 return expTy(v->u.simple, actual_ty(x->u.var.ty));
+                */ 
+				return expTy(NULL, actual_ty(x->u.var.ty));
+            } else {
                 /*
                  值环境中不存在
                  或者存在 ，但绑定的值不是简单变量，说明一个符号应该是简单变量，但对应的值不是简单变量，报语义错误
                  */
-                EM_error(v->pos, " undefined var %s or the type is not simple var", S_name(v->u.simple));
+                EM_error(v->pos, " undefined var %s", S_name(v->u.simple));
 
-                /* 固定返回 int, 让编译器继续往下走。 */
-                return expTy(NULL, Ty_Int());
-            } else {
-
-                /*
-                 返回一个转义的表达式的对象 expty {Tr_exp exp; Ty_ty ty;}
-                 属性为表达式 Tr_exp exp 和 对应的类型 Ty_ty ty
-                 return expTy(v->u.simple, actual_ty(x->u.var.ty));
-                 */
-                return expTy(NULL, actual_ty(x->u.var.ty));
+                /* 固定返回 int, 让编译器继续往下走。 */                
+				return expTy(NULL, Ty_Int());
             }
             break;
-
 
             /*
              * var record (a.b) 域变量
@@ -284,8 +256,10 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
              * 其中 intlist.hd   intlist 对应 A_var var, hd 对应 S_symbol sym
              * */
         case A_fieldVar :
+            printf(" field symbol : %s \n", S_name(v->u.field.sym));
+            printf(" field var : %s \n", S_name(v->u.field.var->u.simple));
 
-            /* 拿到 a.b 对应的类型，则应该走 simpleVar 分支，为 record 类型，*/
+            /* 解析 var.symbol */
             et = transVar(venv, tenv, v->u.field.var);
 
             /* 在 {hd: int, tl: intlist} 中 找hd 对应的类型 */
@@ -297,6 +271,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
                 EM_error(v->pos, " it is field var, but not a record type.");
                 return expTy(NULL, Ty_Record(NULL));
             }
+
 
             /* 遍历当前的 Ty_record 环境 的所有 field , 找到v的符号( hd )对应的那个field: {hd: int}
              * 他的类型就是对应的 intlist.hd 的类型*/
@@ -319,6 +294,8 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
              * b 对应 A_exp exp, 不一定是个数字 ，也可以是个表达式，如变量名，或计算表达式
              * */
         case A_subscriptVar:
+
+            printf(" sub script exp type : %d \n", v->u.subscript.exp->kind);
 
             /* 获取数组 arr */
             et = transVar(venv, tenv, v->u.subscript.var);
@@ -347,7 +324,11 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
  */
 static struct expty transExp(S_table v, S_table t, A_exp e) {
 
-    EM_pfun(e->pos,"====> transExp\n");
+    /* 打印当前的表达式类型 */
+    string* enums[16] = {"A_varExp", "A_nilExp", "A_intExp", "A_doubleExp", "A_stringExp", "A_callExp",
+                     "A_opExp", "A_recordExp", "A_seqExp", "A_assignExp", "A_ifExp",
+                     "A_whileExp", "A_forExp", "A_breakExp", "A_letExp", "A_arrayExp"};
+    EM_pfun(e->pos,"=========================> transExp : %s \n", enums[e->kind]);
 
     E_enventry callinfo; /* 函数调用: funx(a,b) */
     Ty_ty recordty, arrayty;
@@ -374,7 +355,6 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
         case A_nilExp:
             EM_pfun(e->pos,"====> A_nilExp\n");
             return expTy(NULL, Ty_Nil());
-
 
             /* 调用表达式 */
         case A_callExp:
@@ -455,9 +435,9 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
                 return expTy(NULL, Ty_Void());
             }
 
-            /* 遍历list */
+            /* 遍历list, 排队添加入全局环境 */
             while (list->tail) {
-                return transExp(v, t, list->head);
+                transExp(v, t, list->head);
                 list = list->tail;
             }
             return transExp(v, t, list->head);
@@ -470,7 +450,7 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
             /* while() 中止条件判断，应该是 int (0, 1) */
             final = transExp(v, t, e->u.whilee.test);
             if (final.ty->kind != Ty_int) {
-                EM_error(e->pos, "while() condition should be int \n");
+                EM_error(e->pos, "while() condition should be int 1/0 \n");
             }
 
             /* while 函数体则没有要求 */
@@ -680,8 +660,12 @@ static void transDec(S_table v, S_table t, A_dec d) {
            vardec   →   var id := exp
                     →   var id : type-id := exp */
         case A_varDec:
-            e = transExp(v, t, d->u.var.init); /* 初始化 */
 
+            EM_pfun(d->pos,"Var name: %s \n", S_name(d->u.var.var));
+            if(d->u.var.typ){
+                EM_pfun(d->pos,"Var type : %s \n", S_name(d->u.var.typ));
+            }
+            e = transExp(v, t, d->u.var.init); /* 初始化 */
             if (!d->u.var.typ) { /* 未指明类型 var id := exp, 则 id 的类型就是 exp 的类型 */
                 if (e.ty->kind == Ty_nil || e.ty->kind == Ty_void) { /* var a := void */
                     EM_error(d->pos, "no need to init to void/nil. \n");
@@ -707,6 +691,7 @@ static void transDec(S_table v, S_table t, A_dec d) {
                     }
                 }
             }
+
             break;
 
             /* 声明函数
@@ -715,9 +700,12 @@ static void transDec(S_table v, S_table t, A_dec d) {
              只要判断函数返回值类型，参数类型 是否是存在的 type 即可
              */
         case A_functionDec:
+            EM_pfun(d->pos,"loop functions dec.\n");
 
             /* 1.判断返回值 */
             for (fdecl = d->u.function; fdecl; fdecl = fdecl->tail) {
+
+                EM_pfun(fdecl->head->pos,"func name: %s \n", S_name(fdecl->head->name));
 
                 /* 有返回值 fdec->head->result(symbol) */
                 if (fdecl->head->result) {
@@ -725,7 +713,7 @@ static void transDec(S_table v, S_table t, A_dec d) {
 
                     /* 找不到 fun_ty，说明返回值类型未定义 */
                     if (!fun_ty) {
-                        EM_error(fdecl->head->pos, "undefined type for return type");
+                        EM_error(fdecl->head->pos, "undefined type for return type\n");
                         fun_ty = Ty_Void();
                     }
                 } else {
@@ -735,13 +723,17 @@ static void transDec(S_table v, S_table t, A_dec d) {
                 /* 形参类型 */
                 formalTys = makeFormalTyList(t, fdecl->head->params);
 
-                /* 将函数环境对象 添加进全局类型环境 */
+                /* 将函数参数类型 添加进全局类型环境 */
                 S_enter(v, d->u.var.var, E_FunEntry(formalTys, fun_ty));
             }
 
             /* 2.判断形参 */
+            EM_pfun(d->pos," start check the formals of function\n");
+
             for (fdecl = d->u.function; fdecl; fdecl = fdecl->tail) {
                 fdec = fdecl->head;
+
+                EM_pfun(fdec->pos," start check the formals of function for func: %s\n", S_name(fdec->name));
 
                 S_beginScope(v);
                 formalTys = makeFormalTyList(t, fdec->params);
@@ -767,32 +759,35 @@ static void transDec(S_table v, S_table t, A_dec d) {
 
         case A_typeDec: /* 声明自定义类型 */
 
-            printf("jump orver typedec.............. \n");
-            break;
-            /*     类型定义
+            EM_pfun(d->pos," start A_typeDec \n");
+            /* 类型定义
                type type-id = typee
                typee:
                     type-id
                     { type-fieldsopt }
                     array of type-id
-
                 如：
                 type mytype = {a:int, b:string}
                 type arrtype = array of int (数组的个数不限制)
                 var row := arrtype[10] of 0
                 var row2 := arrtype[11] of 1 */
 
-            /* 将多个类型声明的每一段 (nl->head) 添加进全局的 类型环境 t , */
+            /* d->u.type 为多个 namety A_nametyList， 每一个元素为一个 A_namety
+             * 将多个类型声明的每一段 (nl->head) 添加进全局的 类型环境 t , */
             for (nl = d->u.type; nl; nl = nl->tail) {
                 /*
                  将符号 name 添加进 类型环境 t 中，添加绑定: sym->value
                  void S_enter(S_table t, S_symbol sym, void *value);
                  这里 value 给个 NULL
                  */
+                EM_pfun(d->pos," name ty:  %s \n", S_name(nl->head->name));
                 S_enter(t, nl->head->name, Ty_Name(nl->head->name, NULL));
             }
 
             /* 假设 设置类型 {a: intt} */
+
+
+            EM_pfun(d->pos," start loop namety list. \n");
             for (nl = d->u.type; nl; nl = nl->tail) {
                 /* 转义 nl-> head 的类型 ， a:int 中的 int */
                 resTy = transTy(t, nl->head->ty);
@@ -915,3 +910,153 @@ static Ty_tyList makeFormalTyList(S_table t, A_fieldList fl) {
     }
     return listhead;
 }
+
+
+letExp (
+    decList(
+        /* 新建类型 type person = {name: string, age: int} */
+        typeDec(
+            nametyList(
+                namety(
+                    person,
+                    recordTy(
+                    fieldList(
+                            field(name, string, TRUE),
+
+                            fieldList (
+                                field(age, int, TRUE),
+                                fieldList() )
+                            )
+                    )
+                ),
+                nametyList()
+            )
+        ),
+
+        decList (
+                /* 声明 record 给变量 p1, var p1 := person {name="Joe", age=66} */
+            varDec(
+                p1,
+                recordExp(
+                   person,
+                   efieldList(
+                       efield(name, stringExp(Joe)),
+                       efieldList(
+                           efield(age, intExp(66)),
+                           efieldList()
+                       )
+                   )
+                ),
+                TRUE),
+
+            decList (
+                /* 声明 record 给变量 p2, var p2: person := nil */
+                varDec(p2, person, nilExp(), TRUE),
+                decList()
+            )
+        )
+    ),
+
+    /* 执行部分 */
+    seqExp(
+            expList(
+                /* print(p1.name); */
+                callExp(
+                    print,
+                    expList(
+                        /* 变量 p1.name */
+                        varExp( fieldVar( simpleVar(p),name)),
+                        expList())
+                ),
+                expList()
+    ))
+)
+
+
+letExp (
+decList(
+        typeDec(
+        nametyList(
+                namety(person,
+                recordTy(
+                fieldList(
+        field(name,
+        string,
+TRUE),
+
+fieldList (
+field(age,
+      int,
+TRUE),
+
+fieldList()
+
+)))),
+
+nametyList()
+
+)),
+
+decList (
+varDec(myrecord1,
+       recordExp(person,
+       efieldList(
+       efield(name,
+              stringExp(Bart)),
+       efieldList(
+       efield(age,
+              intExp(
+
+34)),
+
+efieldList()
+
+))),
+TRUE),
+
+decList (
+varDec(myrecord2,
+       recordExp(person,
+       efieldList(
+       efield(name,
+              stringExp(Bart)),
+       efieldList(
+       efield(age,
+              intExp(
+
+34)),
+
+efieldList()
+
+))),
+TRUE),
+
+decList()
+
+))),
+
+seqExp(
+        expList(
+        opExp(
+        EQUAL,
+        varExp(
+        fieldVar(
+        simpleVar(myreqord1),
+        name)),
+        varExp(
+        fieldVar(
+        simpleVar(myrecord1),
+        name)
+
+)),
+
+expList(
+        opExp(
+        NOTEQUAL,
+        varExp(
+        simpleVar(myreqord1)),
+        varExp(
+        simpleVar(myrecord2))),
+        expList()
+
+))))
