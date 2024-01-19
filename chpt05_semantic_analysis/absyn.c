@@ -16,42 +16,48 @@
 #include "symbol.h" /* symbol table data structures */
 #include "absyn.h"  /* abstract syntax data structures */
 
-/* 变量 */
+/*变量
+ S_symbol => a pointer to struct {string name; S_symbol}; IN A WORD one node of a list
+ */
 A_var A_SimpleVar(A_pos pos, S_symbol sym)
-{A_var p = checked_malloc(sizeof(*p));
- p->kind=A_simpleVar;
- p->pos=pos; /* 当前树节点的位置 */
- p->u.simple=sym; /* 变量名 */
- return p;
+{
+	A_var p = checked_malloc(sizeof(*p));
+	p->kind = A_simpleVar;
+    p->pos = pos;
+    p->u.simple = sym;
+    return p;
 }
 
 /* 域变量 a.b */
 A_var A_FieldVar(A_pos pos, A_var var, S_symbol sym)
-{A_var p = checked_malloc(sizeof(*p));
- p->kind=A_fieldVar;
- p->pos=pos;
- p->u.field.var=var;
- p->u.field.sym=sym;
- return p;
+{
+	A_var p = checked_malloc(sizeof(*p));
+	p->kind=A_fieldVar;
+	p->pos=pos;
+	p->u.field.var=var;
+	p->u.field.sym=sym;
+	return p;
 }
 
 /* 数组下标 */
 A_var A_SubscriptVar(A_pos pos, A_var var, A_exp exp)
-{A_var p = checked_malloc(sizeof(*p));
- p->kind=A_subscriptVar;
- p->pos=pos;
- p->u.subscript.var=var;
- p->u.subscript.exp=exp;
- return p;
+{
+	A_var p = checked_malloc(sizeof(*p));
+	p->kind=A_subscriptVar;
+	p->pos=pos;
+	p->u.subscript.var=var;
+	p->u.subscript.exp=exp;
+	return p;
 }
 
 /* 表达式 */
 A_exp A_VarExp(A_pos pos, A_var var)
-{A_exp p = checked_malloc(sizeof(*p));
- p->kind=A_varExp;
- p->pos=pos;
- p->u.var=var;
- return p;
+{
+	A_exp p = checked_malloc(sizeof(*p));
+	p->kind=A_varExp;
+	p->pos=pos;
+	p->u.var=var;
+	return p;
 }
 
 /* null 表达式 */
@@ -71,7 +77,15 @@ A_exp A_IntExp(A_pos pos, int i)
  return p;
 }
 
-/* String 变量 */
+A_exp A_DoubleExp(A_pos pos, double d)
+{
+	A_exp p = checked_malloc(sizeof(*p));
+	p->kind = A_doubleExp;
+	p->pos  = pos;
+	p->u.doublee = d;
+	return p;
+}
+
 A_exp A_StringExp(A_pos pos, string s)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_stringExp;
@@ -279,9 +293,8 @@ A_expList A_ExpList(A_exp head, A_expList tail)
 }
 
 /* 函数声明 */
-A_fundec A_Fundec(A_pos pos, S_symbol name, A_fieldList params, S_symbol result,
-		  A_exp body)
-{A_fundec p = checked_malloc(sizeof(*p));
+A_fundec A_Fundec(A_pos pos, S_symbol name, A_fieldList params, S_symbol result, A_exp body){
+ A_fundec p = checked_malloc(sizeof(*p));
  p->pos=pos;
  p->name=name;
  p->params=params;
