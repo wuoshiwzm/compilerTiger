@@ -8,22 +8,25 @@
 #include "symbol.h"
 #include "absyn.h"
 #include "errormsg.h"
-#include "parser.h"
+#include "parse.h"
 #include "prabsyn.h"
 #include "semant.h"
 
 extern int yyparse(void);
 extern A_exp absyn_root;
 
-/* parse source file fname; 
+/*
+ *
+ * 解析为抽象语法
+ * parse source file fname;
    return abstract syntax data structure */
-A_exp parse(string fname) 
+A_exp parse(string fname)
 {
 	EM_reset(fname);
     if (yyparse() == 0) /* parsing worked */
 		return absyn_root;
 	else 
-		printf("oooooooooooooooooooooooooooooooooooooops! not pass syntax!\n");
+		printf("oooooooooooooooooooooooooooooooooooooops! not pass syntax! no need to do type check.  \n");
 		return NULL;
 }
 
@@ -32,8 +35,16 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "usage: a.out filename\n");
 		exit(1);
 	}
+
+    printf("file::: %s",argv[1]);
 	A_exp temp = parse(argv[1]);
+
+    /* 类型检查 */
 	if (temp) {
+
+        pr_exp(stdout, temp, 4);
+        printf("\n-------------------------\n");
+
 		SEM_transProg(temp);
 	}
 	return 0;
