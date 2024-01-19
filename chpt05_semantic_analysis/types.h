@@ -13,7 +13,7 @@ typedef struct Ty_fieldList_ *Ty_fieldList;
 /* 类型结构体 */
 struct Ty_ty_ {
     enum {
-        // 基础类型
+        /* 基础类型 */
         Ty_record, Ty_nil, Ty_int, Ty_string, Ty_array, Ty_name, Ty_void, Ty_double
     } kind;
     union {
@@ -34,11 +34,11 @@ struct Ty_fieldList_ {Ty_field head; Ty_fieldList tail;};
 Ty_ty Ty_Nil(void);
 Ty_ty Ty_Int(void);
 Ty_ty Ty_String(void);
-Ty_ty Ty_Double(void);
+
 
 /* void 类型 */
 Ty_ty Ty_Void(void);
-
+Ty_ty Ty_Double(void);
 /* 域列表类型 */
 Ty_ty Ty_Record(Ty_fieldList fields);
 /* 数组类型 */
