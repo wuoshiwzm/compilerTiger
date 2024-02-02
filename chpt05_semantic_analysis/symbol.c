@@ -121,10 +121,8 @@ void S_dump(S_table t, void (*show)(S_symbol sym, void *binding)) {
   TAB_dump(t, (void (*)(void *, void *)) show);
 }
 
-/*
-void S_show(S_table s, int type) {
-	if(type == 1) TAB_show_tenv(s);
-	else if (type == 2) TAB_show_venv(s);
-	else puts("unlonw table");
+
+void S_show(S_table s) {
+    TAB_show_tenv(s);
 }
-*/
+

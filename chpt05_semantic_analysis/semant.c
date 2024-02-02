@@ -229,7 +229,6 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v){
                 printf(" opps, S_look find no defined type for var : %s \n.", S_name(v->u.simple));
             }
 
-
             /* 符号 */
             if (x && x->kind == E_varEntry) {
 				/*
@@ -250,11 +249,11 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v){
             }
             break;
 
-            /*
-             * var record (a.b) 域变量
-             * 如 type intlist = {hd: int, tl: intlist}  intlist.hd
-             * 其中 intlist.hd   intlist 对应 A_var var, hd 对应 S_symbol sym
-             * */
+        /*
+         * var record (a.b) 域变量
+         * 如 type intlist = {hd: int, tl: intlist}  intlist.hd
+         * 其中 intlist.hd   intlist 对应 A_var var, hd 对应 S_symbol sym
+         * */
         case A_fieldVar :
             printf(" field symbol : %s \n", S_name(v->u.field.sym));
             printf(" field var : %s \n", S_name(v->u.field.var->u.simple));
@@ -573,8 +572,17 @@ static struct expty transExp(S_table v, S_table t, A_exp e) {
                 }
 
                 /* 比较式左右的类型应该相等 */
-                if (left.ty->kind != right.ty->kind) {
-                    EM_error(e->pos, " the left exp type is not the same with right exp type, can not compare! \n");
+
+                printf("left type kind:::%d      |",left.ty->kind);
+                printf("right type kind:::%d     \n",right.ty->kind);
+
+                // EM_error(e->pos, " the left exp type is not the same with right exp type, can not compare! \n");
+                if (left.ty->kind != Ty_int && left.ty->kind != Ty_double && left.ty->kind != Ty_string) {
+                    EM_error(e->u.op.left->pos, " left type should be int, double ,or record-nil ! \n");
+                }
+
+                if (right.ty->kind != Ty_int && right.ty->kind != Ty_double && right.ty->kind != Ty_string) {
+                    EM_error(e->u.op.right->pos, " right type should be int, double ,or record-nil ! \n");
                 }
 
                 return expTy(NULL, Ty_Int());
@@ -651,7 +659,7 @@ static void transDec(S_table v, S_table t, A_dec d) {
 
     /* 类型声明 */
     A_nametyList nl;
-    Ty_ty resTy, namety;
+    Ty_ty resTy, namety, recordTy;
     bool useUndefype;
 
     switch (d->kind) {
@@ -660,45 +668,42 @@ static void transDec(S_table v, S_table t, A_dec d) {
            vardec   →   var id := exp
                     →   var id : type-id := exp */
         case A_varDec:
+            EM_pfun(d->pos," ======> A_varDec, Var name: %s\n", S_name(d->u.var.var));
+            Ty_ty tt = NULL;
+            struct expty final;
 
-            EM_pfun(d->pos,"Var name: %s \n", S_name(d->u.var.var));
-            if(d->u.var.typ){
-                EM_pfun(d->pos,"Var type : %s \n", S_name(d->u.var.typ));
-            }
+            // 获取要初始化的值类型 (有可能是 int, string, record 等 ... )
             e = transExp(v, t, d->u.var.init); /* 初始化 */
-            if (!d->u.var.typ) { /* 未指明类型 var id := exp, 则 id 的类型就是 exp 的类型 */
-                if (e.ty->kind == Ty_nil || e.ty->kind == Ty_void) { /* var a := void */
-                    EM_error(d->pos, "no need to init to void/nil. \n");
-                    /* e绑定为 var(symbol) <-> int */
-                    S_enter(v, d->u.var.var, E_VarEntry(Ty_Int()));
-                } else {
-                    /* 将绑定 加入值环境 v, 值(符号)为d->u.var.var， 类型为E_VarEntry(e.ty) */
-                    S_enter(v, d->u.var.var, E_VarEntry(e.ty));
-                }
-            } else { /* 指明类型 var id : type-id := exp */
 
-                /* 在类型环境中找 type-id 对应的类型*/
-                dec_ty = S_look(t, d->u.var.typ);
-                if (!dec_ty) { /* 不存在 type-id 对应的类型声明 */
-                    EM_error(d->pos, "undefined type %s. \n", S_name(d->u.var.typ));
-                } else {
-                    /* 判断 type-id 和 exp 的类型是否一样 */
-                    if (!ty_match(dec_ty, e.ty)) {
-                        EM_error(d->pos, "type-id and exp type is not same : %s. \n", S_name(d->u.var.typ));
-                        S_enter(v, d->u.var.var, E_VarEntry(dec_ty));
-                    } else {
-                        S_enter(v, d->u.var.var, E_VarEntry(dec_ty));
-                    }
+            // 1. 声明 var id : type-id := exp 指明变量类型
+            if(d->u.var.typ != NULL) {
+                printf("var dec with named type. \n");
+                EM_pfun(d->pos,">>>var %s, named type: %s\n", S_name(d->u.var.var) ,S_name(d->u.var.typ));
+                // 查找类型对应的 符号
+                tt = S_look(t, d->u.var.typ);
+                if(tt == NULL){
+                    // 定义的类型 d->u.var.typ 找不到
+                    EM_error(d->pos, " you name a var with type, but the type do not existed. ");
+                    S_enter(v, d->u.var.var, E_VarEntry(Ty_Int()));
                 }
+                S_enter(v, d->u.var.var, E_VarEntry(tt));
+                EM_pfun(d->pos," ==========> after var dec,  name: %s ,  type: %s \n", S_name(d->u.var.var), S_name(d->u.var.typ));
+                return;
             }
 
+            // 2. 声明 var id := exp, 未指明变量类型
+            printf("var dec without named type. \n");
+            EM_pfun(d->pos, ">>>var %s, named type(exp): %d \n", S_name(d->u.var.var), e.ty->kind);
+            S_enter(v, d->u.var.var, E_VarEntry(e.ty));
+
+            return;
             break;
 
-            /* 声明函数
-             fundec →   function id ( tyfields) = exp
-                    →   function id ( tyfields) : type-id = exp
-             只要判断函数返回值类型，参数类型 是否是存在的 type 即可
-             */
+        /* 声明函数
+         fundec →   function id ( tyfields) = exp
+                →   function id ( tyfields) : type-id = exp
+         只要判断函数返回值类型，参数类型 是否是存在的 type 即可
+         */
         case A_functionDec:
             EM_pfun(d->pos,"loop functions dec.\n");
 
@@ -772,37 +777,57 @@ static void transDec(S_table v, S_table t, A_dec d) {
                 var row := arrtype[10] of 0
                 var row2 := arrtype[11] of 1 */
 
-            /* d->u.type 为多个 namety A_nametyList， 每一个元素为一个 A_namety
-             * 将多个类型声明的每一段 (nl->head) 添加进全局的 类型环境 t , */
+            // 1. 判断不同类型是否同名
+
+
+            // 1. 将新建的类型名 mytype arrtype 添加进 全局类型环境
+            /* d->u.type 为多个 namety A_nametyList， 每一个元素为一个 A_namety 将多个类型声明的每一段 (nl->head) 添加进全局的 类型环境 t , */
             for (nl = d->u.type; nl; nl = nl->tail) {
-                /*
-                 将符号 name 添加进 类型环境 t 中，添加绑定: sym->value
+                /* 将符号 name 添加进 类型环境 t 中，添加绑定: sym->value
                  void S_enter(S_table t, S_symbol sym, void *value);
-                 这里 value 给个 NULL
-                 */
-                EM_pfun(d->pos," name ty:  %s \n", S_name(nl->head->name));
+                 这里 value 给个 NULL */
+                EM_pfun(d->pos,"new type name:  %s \n", S_name(nl->head->name));
                 S_enter(t, nl->head->name, Ty_Name(nl->head->name, NULL));
             }
 
-            /* 假设 设置类型 {a: intt} */
-
-
-            EM_pfun(d->pos," start loop namety list. \n");
-            for (nl = d->u.type; nl; nl = nl->tail) {
-                /* 转义 nl-> head 的类型 ， a:int 中的 int */
-                resTy = transTy(t, nl->head->ty);
-
-                /* 如果某一条声明语句对应的类型名字不存在，说明这种类型还没有声明，不能用它来声明新的类型
-                 * 如   a: intt,  这里的 intt 应该已经声明过新类型名， 否则intt 不是Ty_name*/
-                if (resTy->kind != Ty_name) {
-                    EM_error(d->pos, " use undefined type: %s", S_name(resTy->u.name.sym));
-                }
-
-                /* 类型环境中查找 声明名字 a (符号) 对应的类型 */
-                namety = S_look(t, nl->head->name);
-                /* 将新建的类型名 a 的类型设置为对应的类型 intt */
-                namety->u.name.ty = resTy;
+            // 2. 将类型环境中的 type 与 抽象语法 Ty_ty->u.name.ty 关联
+            for(nl = d->u.type; nl; nl = nl->tail) {
+                Ty_ty tt = S_look(t, nl->head->name);
+                printf("check kind: %d,  name::: %s \n", tt->kind, S_name(tt->u.name.sym));
+                assert(tt->kind == Ty_name);
+                tt->u.name.ty = transTy(t, nl->head->ty);
             }
+
+
+
+            /* 设置类型 */
+//            EM_pfun(d->pos," start loop namety list.... \n");
+//
+//            for (nl = d->u.type; nl; nl = nl->tail) {
+//                /* resTy 为 record 类型 （即 field list）， {key: int, children: int}*/
+//                recordTy = transTy(t, nl->head->ty);
+//
+//                /*
+//                 * 如果某一条声明语句对应的类型名字不存在，说明这种类型还没有声明，不能用它来声明新的类型
+//                 * 如 a: intt,  这里的 intt 应该已经声明过新类型名，否则intt 不是Ty_name
+//                 * */
+//                printf("::::::::::::::::::::::::::::\n");
+//                printf("type name::: %s\n", S_name(nl->head->name));
+//                printf("A_typeDec typeknid %d (0: record) \n",recordTy->kind);
+//                printf("A_typeDec typeknid head %s \n", S_name(recordTy->u.record->head->name));
+//                printf("::::::::::::::::::::::::::::\n");
+//
+//                if (recordTy->kind != Ty_name) {
+//                    EM_error(d->pos, " use undefined type: %s", S_name(recordTy->u.name.sym));
+//                }
+//
+//                /* 类型环境中查找 声明名字 a (符号) 对应的类型 */
+//                namety = S_look(t, nl->head->name);
+//                /* 将新建的类型名 a 的类型设置为对应的类型 intt */
+//                namety->u.name.ty = recordTy;
+//            }
+
+            printf("end of type dec......................................................\n");
             break;
 
         default:
@@ -815,12 +840,16 @@ static void transDec(S_table v, S_table t, A_dec d) {
  * 返回类型声明部分 具体的类型 Ty_ty*/
 static Ty_ty transTy(S_table tb, A_ty ty) {
 
+    EM_pfun(ty->pos," start transTy.... \n");
+
     Ty_ty tt = NULL;
     Ty_fieldList fieldTys;
 
     switch (ty->kind) {
 
         case A_nameTy:  /* type mytype = intt 中的 intt, 判断是否是已经定义过的 类型*/
+            EM_pfun(ty->pos,"  A_nameTy.... \n");
+
             tt = S_look(tb, ty->u.name);
             if (!tt) {
                 EM_error(ty->pos, "undefined type : %s .\n", S_name(ty->u.name));
@@ -828,6 +857,7 @@ static Ty_ty transTy(S_table tb, A_ty ty) {
             return tt;
 
         case A_recordTy:  /* type mytype = {a:intt, b:str} 中的 {a:intt, b:str}*/
+            EM_pfun(ty->pos,"  A_recordTy.... \n");
 
             fieldTys = makeFieldTys(tb, ty->u.record);
 
@@ -835,6 +865,7 @@ static Ty_ty transTy(S_table tb, A_ty ty) {
             return Ty_Record(fieldTys);
 
         case A_arrayTy:   /* type mytype = array of intt 中的 array of intt*/
+            EM_pfun(ty->pos,"  A_arrayTy.... \n");
 
             /* 查找符号 S_symbol array 对应的类型，就是要返回的类型 */
             tt = S_look(tb, ty->u.array);
@@ -911,152 +942,3 @@ static Ty_tyList makeFormalTyList(S_table t, A_fieldList fl) {
     return listhead;
 }
 
-
-letExp (
-    decList(
-        /* 新建类型 type person = {name: string, age: int} */
-        typeDec(
-            nametyList(
-                namety(
-                    person,
-                    recordTy(
-                    fieldList(
-                            field(name, string, TRUE),
-
-                            fieldList (
-                                field(age, int, TRUE),
-                                fieldList() )
-                            )
-                    )
-                ),
-                nametyList()
-            )
-        ),
-
-        decList (
-                /* 声明 record 给变量 p1, var p1 := person {name="Joe", age=66} */
-            varDec(
-                p1,
-                recordExp(
-                   person,
-                   efieldList(
-                       efield(name, stringExp(Joe)),
-                       efieldList(
-                           efield(age, intExp(66)),
-                           efieldList()
-                       )
-                   )
-                ),
-                TRUE),
-
-            decList (
-                /* 声明 record 给变量 p2, var p2: person := nil */
-                varDec(p2, person, nilExp(), TRUE),
-                decList()
-            )
-        )
-    ),
-
-    /* 执行部分 */
-    seqExp(
-            expList(
-                /* print(p1.name); */
-                callExp(
-                    print,
-                    expList(
-                        /* 变量 p1.name */
-                        varExp( fieldVar( simpleVar(p),name)),
-                        expList())
-                ),
-                expList()
-    ))
-)
-
-
-letExp (
-decList(
-        typeDec(
-        nametyList(
-                namety(person,
-                recordTy(
-                fieldList(
-        field(name,
-        string,
-TRUE),
-
-fieldList (
-field(age,
-      int,
-TRUE),
-
-fieldList()
-
-)))),
-
-nametyList()
-
-)),
-
-decList (
-varDec(myrecord1,
-       recordExp(person,
-       efieldList(
-       efield(name,
-              stringExp(Bart)),
-       efieldList(
-       efield(age,
-              intExp(
-
-34)),
-
-efieldList()
-
-))),
-TRUE),
-
-decList (
-varDec(myrecord2,
-       recordExp(person,
-       efieldList(
-       efield(name,
-              stringExp(Bart)),
-       efieldList(
-       efield(age,
-              intExp(
-
-34)),
-
-efieldList()
-
-))),
-TRUE),
-
-decList()
-
-))),
-
-seqExp(
-        expList(
-        opExp(
-        EQUAL,
-        varExp(
-        fieldVar(
-        simpleVar(myreqord1),
-        name)),
-        varExp(
-        fieldVar(
-        simpleVar(myrecord1),
-        name)
-
-)),
-
-expList(
-        opExp(
-        NOTEQUAL,
-        varExp(
-        simpleVar(myreqord1)),
-        varExp(
-        simpleVar(myrecord2))),
-        expList()
-
-))))

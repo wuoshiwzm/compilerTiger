@@ -22,3 +22,5 @@ void *S_look(S_table t, S_symbol sym);
 
 void S_beginScope(S_table t);
 void S_endScope(S_table t);
+
+void S_show(S_table);

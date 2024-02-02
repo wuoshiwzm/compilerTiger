@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include "util.h"
 #include "table.h"
+#include "symbol.h"
+#include "types.h"
+#include "env.h"
 
 // 为什么符号表中 table属性 数组的长度是 127???????
 #define TABSIZE 127
@@ -96,8 +99,7 @@ void *TAB_look(TAB_table t, void *key)
     int index;
     binder b;
     assert(t && key);
-    index = ((unsigned)key) % TABSIZE;
-
+    index = ((unsigned long)key) % TABSIZE;
     for (b = t->table[index]; b; b = b->next) {
         if(b->key == key) return b->value;
     }
@@ -158,6 +160,57 @@ void  TAB_dump(TAB_table t, void(*show)(void *key, void *value)){
     /* 对 key　对应的 binder 都遍历完了 回复 table 的 top 的 table[index] 对应的 binder */
     t->top = topKey;
     t->table[index] = b;
+}
+
+void TAB_show_tenv(TAB_table t) {
+    if (!t) {
+        puts("empty table");
+        return;
+    }
+    binder* i = t->table;
+    for (; i < &t->table[TABSIZE]; i++) {
+        if (*i) {
+            char* s = "";
+            char ext = '\0';
+            Ty_ty tmp = (Ty_ty)(*i)->value;
+            if (tmp) {
+                printf("%d", tmp->kind);
+                switch (tmp->kind) {
+                case Ty_record:
+                    s = "reocord";
+                    break;
+                case Ty_array:
+                    s = "arrry of";
+                    ext = '0' + tmp->u.array->kind;
+                    break;
+                case Ty_int:
+                    s = "int";
+                    break;
+                case Ty_string:
+                    s = "string";
+                    break;
+                case Ty_nil:
+                    s = "nil";
+                    break;
+                case Ty_void:
+                    s = "void";
+                    break;
+                case Ty_name:
+                    s = S_name(tmp->u.name.sym);
+                    break;
+                case Ty_double:
+                    s = "double";
+                    break;
+                }
+
+            }
+            printf("%s => %s %c\n", S_name((S_symbol)(*i)->key), s, ext);
+        }
+    }
+}
+
+void TAB_show_venv(TAB_table v) {
+
 }
 
 
