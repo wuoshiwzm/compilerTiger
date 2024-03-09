@@ -1,5 +1,6 @@
 .git/
 .idea/
+.vs/
 tiger.output
 tiger.tab.*
 *.o
