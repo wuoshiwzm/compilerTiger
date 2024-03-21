@@ -9,13 +9,13 @@
 #include "frame.h"
 #include "escape.h"
 #include "translate.h"
- 
+
+
 
 /*  什么时候创建栈帧？
 
     frame.h: 存储器变量
     temp.h:  寄存器变量
-
 */
 
 
@@ -36,32 +36,33 @@
 
 struct F_frame_
 {
-    // 所有形参的位置
-    void *formalPos;
+    // 函数的栈帧标识符
+    S_symbol name;
 
-    // 实现 "视角移位" 的指令
-    string cmd;
+    // 父帧指针，调用它的函数的栈帧
+    F_frame parentFp;
 
-    // 迄今为止已分配的栈帧的大小
-    int size;
+    // 局部变量
+    F_accessList locals;
 
-    // 函数开始点的机器代码标号
-    Temp_label startLabel;
+    // 实参..., 形参已经在抽象语法中定义了，栈帧只需要定义实参，实参保证用连续地址
+    F_accessList params;
 
-    // 三个位移信息，sp 到 offset 中间为栈帧部分 原来的SP 就变成了 FP
-    int fp;
-    int offset;
-    int staticLink; // 每一个栈帧都含有一个静态链, 指向调用他的那个函数
+    // 返回地址 调用函数f的 call指令地址+1
+    void *retAddr;
 
-    // 形参
-    
-    // 临时变量 
-    
-    // 保护的寄存器
+    // 临时变量
+    Temp_tempList temps;
 
-    // 实参1...n
+    // 静态链
+    int staticLink;
 
-}
+    // 是否逃逸 （暂时所有参数都当成逃逸的，入栈帧）
+    U_boolList escapes;
+    // 保护的寄存器 (暂时没用)
+
+
+};
 
 struct F_access_ 
 {
@@ -70,23 +71,25 @@ struct F_access_
         int offset; // 栈帧中， 则看偏移量 offset
         Temp_temp reg;  // 寄存器，则看临时寄存器变量 Temp_temp
     } u;
-}
+};
 
 
 // 文件外不可见，F_access 不对外暴露 
 static F_access InFrame(int offset); // 指出一个相对帧指针 FP 偏移量 offset 的存储位置
 static F_access InReg(Temp_temp reg); // 指出使用寄存器 reg
 
+ 
 
 // 创建一个栈帧
-F_frame F_newFrame(Temp_label name, U_boolList formals){
-    //  S_symbol s = checked_malloc(sizeof(*s));
+F_frame F_newFrame(Temp_label funname, U_boolList formals){
+
     F_frame f = checked_malloc(sizeof(*f));
-    f.startLabel = name;
+    f->name = funname;
 
-    // 如果是逃逸的参数，则一定进栈帧; 如果不是逃逸参数，则有可能进栈帧，也有可能不进，这里先不要求处理
-    // todo... 
+    // 获取调用函数的信息
 
+    // 目前所有参数都当成逃逸的，全都进栈帧
+    f->escapes = formals;
 
     return f;
 }
@@ -98,5 +101,11 @@ F_frame F_newFrame(Temp_label name, U_boolList formals){
 F_access F_allocLocal(F_frame f, bool escape){
 
 
+
+
 }
+
+
+
+
  
