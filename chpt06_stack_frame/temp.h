@@ -10,6 +10,7 @@ typedef struct Temp_tempList_ *Temp_tempList;
 struct Temp_tempList_ { Temp_temp head; Temp_tempList tail;};
 Temp_tempList Temp_TempList(Temp_temp h, Temp_tempList t);
 
+// Temp_label 就是符号！
 typedef S_symbol Temp_label;
 Temp_label Temp_newlabel(void);
 Temp_label Temp_namedlabel(string name);
