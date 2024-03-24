@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 // 抽象语法
 #include "table.h"
 #include "util.h"
@@ -16,11 +17,8 @@ include "tree.h"
 #include "myframe.h"
 #include "translate.h"
 
-
-
 // 字符长度 4个字节
 const int F_wordSize = 4;
-
 
 /*
     帧指针 FP
