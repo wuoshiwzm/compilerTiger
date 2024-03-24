@@ -33,29 +33,29 @@ Temp_label F_name(F_frame f);
 F_accessList F_formals(F_frame f);
 
 // 获取对某个局部变量的访问 escape表示是否逃逸
-F_access F_allocLocal(F_frame f, bool escape);
-
-
-
-// return value
-
-// return addr
-
-// 全局帧指针（最新的栈帧）  (a.k.a. Base Pointer).
-Temp_temp F_FP(void);
-// 全局栈指针 （栈顶，大于栈顶的都认为是空区域）,一开始在高地址，push 一个 frame 减 k
-Temp_temp F_SP(void);
+F_access F_allocLocal(F_frame f, TRUE);
 
 // 静态链
 F_access F_staticLink();
 
 
 
+// 下面为 中间代码优化的内容？
 
+
+// 全局帧指针（最新的栈帧）  (a.k.a. Base Pointer).
+//Temp_temp F_FP(void);
+
+// 全局栈指针 （栈顶，大于栈顶的都认为是空区域）,一开始在高地址，push 一个 frame 减 k
+//Temp_temp F_SP(void);
+
+// return value
+
+// return addr
 
 // 寄存器...
 
-
+#endif //COMPILER_TIGER_MASTER_FRAME_H
 
 
 
@@ -88,31 +88,35 @@ F_access F_staticLink();
  * 栈元素
  */
 // 全局栈指针（栈顶，大于栈顶的都认为是空区域）,一开始在高地址，push 一个 frame 减 k
-int sp = 65536;
-
-typedef struct F_stackNode_ {
-    enum { F_local, F_retAddr, F_param, F_staticLink } kind;
-    union{
-        struct {int addr;} retAddr;
-        struct {int addr;} parentFp;
-        struct {F_accessList list;} params;
-        struct {F_accessList list;} locals;
-        struct {Temp_tempList list;} temps;
-        struct {int link;} staticLink;
-    } u;
-    struct F_stackNode_ *next;
-} *F_stackNode;
-
-void setSp(int val){ sp = val; }
-void addSp(){ sp++; }
-void reduceSp(){ sp--; }
-
-void F_push(F_stackNode node);
-
-F_stackNode F_pop();
+//int sp = 65536;
+//
+//typedef struct F_stackNode_ {
+//    enum { F_local, F_retAddr, F_param, F_staticLink } kind;
+//    union{
+//        struct {int addr;} retAddr;
+//        struct {int addr;} parentFp;
+//        struct {F_accessList list;} params;
+//        struct {F_accessList list;} locals;
+//        struct {Temp_tempList list;} temps;
+//        struct {int link;} staticLink;
+//    } u;
+//    struct F_stackNode_ *next;
+//} *F_stackNode;
+//
+//void setSp(int val){ sp = val; }
+//void addSp(){ sp++; }
+//void reduceSp(){ sp--; }
+//void F_push(F_stackNode node);
+//F_stackNode F_pop();
 
 
 
 
 
-#endif //COMPILER_TIGER_MASTER_FRAME_H
+
+
+
+
+
+
+

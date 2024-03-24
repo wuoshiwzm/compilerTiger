@@ -2,20 +2,45 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+// 抽象语法
+#include "table.h"
 #include "util.h"
 #include "symbol.h"
+
+// tree
+include "tree.h"
+
+// 栈帧
 #include "temp.h"
-#include "table.h"
 #include "frame.h"
-#include "escape.h"
+#include "myframe.h"
 #include "translate.h"
 
+
+
+// 字符长度 4个字节
+const int F_wordSize = 4;
+
+
+/*
+    帧指针 FP
+*/
+static Temp_temp fp = NULL;
+
+// 获取当前 帧指针
+Temp_temp F_FP(){
+    if(fp === NULL){
+        // 初始化为 Temp_newtemp()
+        fp = Temp_newtemp();
+    }
+    return fp;
+}
 
 
 /*  什么时候创建栈帧？
 
     frame.h: 存储器变量
-    temp.h:  寄存器变量
+    temp.h:  寄存器变量 ???
 */
 
 
@@ -34,44 +59,7 @@
     7.  函数参数大于k个 （k一般为 4 到 5个）
 */
 
-struct F_frame_
-{
-    // 函数的栈帧标识符
-    S_symbol name;
 
-    // 父帧指针，调用它的函数的栈帧
-    F_frame parentFp;
-
-    // 局部变量
-    F_accessList locals;
-
-    // 实参..., 形参已经在抽象语法中定义了，栈帧只需要定义实参，实参保证用连续地址
-    F_accessList params;
-
-    // 返回地址 调用函数f的 call指令地址+1
-    void *retAddr;
-
-    // 临时变量
-    Temp_tempList temps;
-
-    // 静态链
-    int staticLink;
-
-    // 是否逃逸 （暂时所有参数都当成逃逸的，入栈帧）
-    U_boolList escapes;
-    // 保护的寄存器 (暂时没用)
-
-
-};
-
-struct F_access_ 
-{
-    enum {inFrame, inReg} kind; // 一个调用 是在栈帧中， 还是在 寄存器中 
-    union{
-        int offset; // 栈帧中， 则看偏移量 offset
-        Temp_temp reg;  // 寄存器，则看临时寄存器变量 Temp_temp
-    } u;
-};
 
 
 // 文件外不可见，F_access 不对外暴露 
