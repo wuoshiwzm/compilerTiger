@@ -18,7 +18,10 @@ typedef struct F_access_ *F_access;
 typedef struct F_accessList_ *F_accessList;
 
 // 定义+声明
-struct F_accessList_ {F_access head; F_accessList *tail;};
+struct F_accessList_ {
+    F_access head;
+    F_accessList tail;
+};
 
 // 构造新栈帧
 F_frame F_newFrame(Temp_label funname, U_boolList formals);
@@ -32,7 +35,26 @@ F_accessList F_formals(F_frame f);
 // 获取对某个局部变量的访问 escape表示是否逃逸
 F_access F_allocLocal(F_frame f, bool escape);
 
-// 栈使用 Temp.c 模块?
+
+
+// return value
+
+// return addr
+
+// 全局帧指针（最新的栈帧）  (a.k.a. Base Pointer).
+Temp_temp F_FP(void);
+// 全局栈指针 （栈顶，大于栈顶的都认为是空区域）,一开始在高地址，push 一个 frame 减 k
+Temp_temp F_SP(void);
+
+// 静态链
+F_access F_staticLink();
+
+
+
+
+
+// 寄存器...
+
 
 
 
@@ -57,17 +79,6 @@ F_access F_allocLocal(F_frame f, bool escape);
 
 
 /*   ============================================================================================================   */
-
-
-
-/*  构造函数，新建栈帧对象
-    name ： 栈帧标识符
-    formals ： 形参是否逃逸
-    F_newFrame(g, U_BoolList(True, U_BoolList(False, U_BoolList(False, NULL))))
-*/
-// 全局帧指针（最新的栈帧）  (a.k.a. Base Pointer).
-F_frame fp ;
-F_frame F_newFrame(S_symbol funname, U_boolList formals);
 
 
 
