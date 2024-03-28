@@ -32,11 +32,20 @@ Temp_label F_name(F_frame f);
 // 获取函数形参的访问 （注意这里是 list， 因为有多个形参）
 F_accessList F_formals(F_frame f);
 
-// 获取对某个局部变量的访问 escape表示是否逃逸
-F_access F_allocLocal(F_frame f, TRUE);
+// 获取对某个局部变量的访问 escape表示是否逃逸 bool escape 暂时默认为 true, 存入 frame
+//F_access F_allocLocal(F_frame f, bool escape);
+F_access F_allocLocal(F_frame f);
 
 // 静态链
 F_access F_staticLink();
+
+
+
+
+
+
+
+
 
 
 
@@ -56,23 +65,6 @@ F_access F_staticLink();
 // 寄存器...
 
 #endif //COMPILER_TIGER_MASTER_FRAME_H
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -108,15 +100,3 @@ F_access F_staticLink();
 //void reduceSp(){ sp--; }
 //void F_push(F_stackNode node);
 //F_stackNode F_pop();
-
-
-
-
-
-
-
-
-
-
-
-
