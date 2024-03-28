@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,7 +8,7 @@
 #include "symbol.h"
 
 // tree
-include "tree.h"
+//#include "tree.h"
 
 // 栈帧
 #include "temp.h"
@@ -21,18 +20,165 @@ include "tree.h"
 const int F_wordSize = 4;
 
 /*
-    帧指针 FP
-*/
+ * 帧指针 FP
+ */
+// 全局帧指针（最新的栈帧）  (a.k.a. Base Pointer).
 static Temp_temp fp = NULL;
-
 // 获取当前 帧指针
 Temp_temp F_FP(){
-    if(fp === NULL){
+    if(fp == NULL){
         // 初始化为 Temp_newtemp()
         fp = Temp_newtemp();
     }
     return fp;
 }
+
+/*
+ * 栈指针
+ */
+static Temp_temp sp = NULL;
+Temp_temp F_SP(){
+    if(sp == NULL){
+        // 初始化为 Temp_newtemp()
+        sp = Temp_newtemp();
+    }
+    return sp;
+}
+
+// 将数据添加进 frame 中， 生成这个访问 access，
+static F_access InFrame(int offset){
+    F_access acc = (F_access) checked_malloc(sizeof (struct F_access_));
+    acc->kind = inFrame;
+    acc->u.offset = offset;
+    return acc;
+}
+// access 存于 reg 中
+static F_access  InReg(Temp_temp reg){
+    F_access acc = (F_access) checked_malloc(sizeof (struct F_access_));
+    acc->kind = inReg;
+    acc->u.reg = reg;
+    return acc;
+}
+
+// 获取下一个位置，即 offset
+static int getNextLoc(F_frame frame){
+    return frame->offset;
+}
+
+static  Temp_temp  getNextReg(F_frame frame){
+    // 局部变量个数++
+    frame->locals++;
+    return Temp_newtemp();
+}
+
+/*
+ * 静态链
+ */
+static F_access static_link = NULL;
+
+F_access F_staticLink(){
+    // 静态链默认在栈帧中
+    if (static_link == NULL){
+        static_link = InFrame(0);
+    }
+    return static_link;
+}
+
+// ***frame 构造, 从形参开始***
+F_frame F_newFrame(Temp_label funname, U_boolList formals){
+    // 局部变量都存在 栈帧中
+    F_frame  f = (F_frame) checked_malloc(sizeof (struct F_frame_));
+    f->begin_label = funname;
+    f->locals = 0;
+    f->offset = 0; // 为offset 为负数，在 frame pointer 基础上
+    // f->formals 形参都存在栈帧中，不存入 register
+
+    // access, accessList : 对应  F_formals  F_allocLocal  F_staticLink
+    F_accessList accList = NULL;
+    F_accessList accList_head = NULL;
+
+    for (;formals!= NULL;formals=formals->tail) {
+        // 更新 tail
+        // 给每个 formal 一个 F_accessList, head 是当前的 formal 是在 栈帧中， 还是寄存器中
+        if (accList_head == NULL){
+            accList = (F_accessList) checked_malloc(sizeof (struct F_accessList_));
+            accList_head = accList;
+        }else{
+            accList->tail = (F_accessList) checked_malloc(sizeof (struct F_accessList_));
+            accList = accList->tail;
+        }
+
+        // 更新 head
+        // 形参 默认是在栈帧中，暂时不考虑在 寄存器存
+        if(formals->head == TRUE){
+            accList->head = InFrame(f->offset); // 当前的偏移量
+            f->offset -= F_wordSize; // 形参进入栈帧，offset 后移一个单位 wordsize
+        }else{
+            // 寄存器中的情况...
+        }
+    }
+    accList->tail = NULL;
+    f->formals = accList_head;
+    return f;
+}
+
+// 返回栈帧的符号
+Temp_label F_name(F_frame f){
+    return f->begin_label;
+}
+
+F_accessList F_formals(F_frame f){
+    return f->formals;
+}
+
+// 局部变量
+// 请求在一个栈帧中分配一个局部变量，escape=true 非逃逸，返回 InFrame(-4) 则表示相对 FP 的位移
+// 如果 escape=false，则有可能返回 InReg(txx) 表示在寄存器中，不占用栈帧
+F_access F_allocLocal(F_frame f){
+    F_access  acc;
+    acc = InFrame(f->offset);
+    f->offset -= F_wordSize;
+    return acc;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ******************************************************************************* //
 
 
 /*  什么时候创建栈帧？
@@ -60,38 +206,6 @@ Temp_temp F_FP(){
 
 
 
-// 文件外不可见，F_access 不对外暴露 
-static F_access InFrame(int offset); // 指出一个相对帧指针 FP 偏移量 offset 的存储位置
-static F_access InReg(Temp_temp reg); // 指出使用寄存器 reg
-
- 
-
-// 创建一个栈帧
-F_frame F_newFrame(Temp_label funname, U_boolList formals){
-
-    F_frame f = checked_malloc(sizeof(*f));
-    f->name = funname;
-
-    // 获取调用函数的信息
-
-    // 目前所有参数都当成逃逸的，全都进栈帧
-    f->escapes = formals;
-
-    return f;
-}
 
 
 
-// 请求在一个栈帧中分配一个局部变量，escape=true 非逃逸，返回 InFrame(-4) 则表示相对 FP 的位移
-// 如果 escape=false，则有可能返回 InReg(txx) 表示在寄存器中，不占用栈帧
-F_access F_allocLocal(F_frame f, bool escape){
-
-
-
-
-}
-
-
-
-
- 
