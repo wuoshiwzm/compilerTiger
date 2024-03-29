@@ -47,20 +47,28 @@
 
 */
 #include <stdio.h>
-#include "env.h"
-#include "frame.h"
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
 #include "util.h"
+#include "symbol.h"
+#include "errormsg.h"
+#include "types.h"
+#include "absyn.h"
+#include "temp.h"
+#include "frame.h"
+#include "translate.h"
+#include "env.h"
 #include "semant.h"
 
 
 /* 核心函数，类型检查 */
 void SEM_transProg(A_exp exp) {
     struct expty et;
-    S_table t = E_base_tenv() /* 类型环境 */
+    S_table t = E_base_tenv(); /* 类型环境 */
     S_table v = E_base_venv(); /* 值环境 */
 
     Tr_level mainLevel = Tr_newLevel(Tr_outermost(), Temp_namedlabel("__main"), NULL);
-
 
     // 把 level 带进来
     et = transExp(mainLevel, v, t, exp);
@@ -82,11 +90,9 @@ static Ty_ty actual_ty(Ty_ty ty) {
 }
 
 static bool ty_match(Ty_ty a, Ty_ty b) {
-
     /* 获取实际类型 */
     Ty_ty t = actual_ty(a);
     Ty_ty e = actual_ty(b);
-
     int tk = t->kind;
     int ek = e->kind;
 
@@ -95,7 +101,6 @@ static bool ty_match(Ty_ty a, Ty_ty b) {
      如果是 Ty_record 或 Ty_array，则要完全相同 : t == e
      如果不是 Ty_record 和 Ty_array 则只要 kind　相同: t->kind == e->kind
      */
-
     return (
             ((tk == Ty_record || tk == Ty_array) && t == e) ||
             (tk == Ty_record && ek == Ty_nil) ||
@@ -114,7 +119,7 @@ static bool ty_match(Ty_ty a, Ty_ty b) {
  * @param fun  函数表达式
  * @return
  */
-static bool args_match(S_table v, S_table tt, A_expList ell, Ty_tyList fll, A_exp fun) {
+static bool args_match(Tr_level level, S_table v, S_table tt, A_expList ell, Ty_tyList fll, A_exp fun) {
     /* 表达式类型	*/
     struct expty et;
     A_expList el = ell; /* 传 */
@@ -123,7 +128,7 @@ static bool args_match(S_table v, S_table tt, A_expList ell, Ty_tyList fll, A_ex
     /* 判断当前的第 i 个实参 与 第 i 个形参 类型是否匹配 */
     while (el && fl) {
         /* 转义函数表达式 第一个 */
-        et = transExp(v, tt, el->head);
+        et = transExp(level, v, tt, el->head);
 
         /* 判断表达式实参 el->head 类型 与 定义的形参 fl->head 的类型是否一样,
          * 即 fun(x,y) 与 fun(int a, int b) 定义时的类型是否匹配 */
@@ -154,18 +159,15 @@ static bool args_match(S_table v, S_table tt, A_expList ell, Ty_tyList fll, A_ex
  * @param e     要比较的表达式
  * @return
  */
-static bool efields_match(S_table v, S_table t, Ty_ty tyy, A_exp e) {
+static bool efields_match(Tr_level level, S_table v, S_table t, Ty_ty tyy, A_exp e) {
     struct expty et;
     Ty_fieldList ty = tyy->u.record; /* 定义的fields 类型 */
     A_efieldList fl = e->u.record.fields; /* 表达式的 fields*/
 
     /* 比较 field list 里面的属性的类型是否一致 */
     while (ty && fl) {
-        et = transExp(v, t, fl->head->exp);
-        if (
-                (ty->head->name != fl->head->name) ||
-                !ty_match(ty->head->ty, et.ty)
-                ) {
+        et = transExp(level, v, t, fl->head->exp);
+        if ((ty->head->name != fl->head->name) || !ty_match(ty->head->ty, et.ty)) {
             EM_error(e->pos, "unmatched name: type in %s", S_name(e->u.record.typ));
             return FALSE;
         }
@@ -192,7 +194,7 @@ static bool efields_match(S_table v, S_table t, Ty_ty tyy, A_exp e) {
 
 /* 解析变量的类型 */
 /* 为局部变量分部存储单元，暂时认为都是逃逸的，存在栈帧中 */
-static struct expty transVar(S_table venv, S_table tenv, A_var v) {
+static struct expty transVar(Tr_level level, S_table venv, S_table tenv, A_var v) {
 
     /* 声明 环境， 类型变量， 域链表变量 */
     E_enventry x; /* 环境 */
@@ -240,7 +242,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
             printf(" field var : %s \n", S_name(v->u.field.var->u.simple));
 
             /* 解析 var.symbol */
-            et = transVar(venv, tenv, v->u.field.var);
+            et = transVar(level, venv, tenv, v->u.field.var);
 
             /* 在 {hd: int, tl: intlist} 中 找hd 对应的类型 */
             Ty_ty basety = actual_ty(et.ty);
@@ -278,14 +280,14 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
             printf(" sub script exp type : %d \n", v->u.subscript.exp->kind);
 
             /* 获取数组 arr */
-            et = transVar(venv, tenv, v->u.subscript.var);
+            et = transVar(level, venv, tenv, v->u.subscript.var);
 
             if (actual_ty(et.ty)->kind != Ty_array) {
                 EM_error(v->pos, "it is not a array");
             }
 
             /* 获取下标，下标的最总类型应该是 int */
-            struct expty exp_et = transExp(venv, tenv, v->u.subscript.exp);
+            struct expty exp_et = transExp(level, venv, tenv, v->u.subscript.exp);
             if (actual_ty(exp_et.ty)->kind != Ty_int) {
                 EM_error(v->pos, " the subscript of arr must be int !");
             }
@@ -302,7 +304,7 @@ static struct expty transVar(S_table venv, S_table tenv, A_var v) {
  * @param e 表达式
  * @return 返回结构体struct expty  {Tr_exp exp; Ty_ty ty;};
  */
-static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
+static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 
     /* 打印当前的表达式类型 */
     string *enums[16] = {"A_varExp", "A_nilExp", "A_intExp", "A_doubleExp", "A_stringExp", "A_callExp",
@@ -329,7 +331,7 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
         /* 变量表达式 */
         case A_varExp:
             EM_pfun(e->pos, "====> A_varExp\n");
-            return transVar(v, t, e->u.var);
+            return transVar(level, v, t, e->u.var);
 
             /* NIL 表达式 */
         case A_nilExp:
@@ -346,7 +348,7 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             if (callinfo && callinfo->kind == E_funEntry) {
 
                 /* 判断实参(e->u.call.args) 和 形参(callinfo->u.fun.formals)类型是否一致 */
-                if (args_match(v, t, e->u.call.args, callinfo->u.fun.formals, e)) {
+                if (args_match(level, v, t, e->u.call.args, callinfo->u.fun.formals, e)) {
                     /* 参数类型正确，返回值类型为 定义的或 void */
                     if (callinfo->u.fun.result) {
                         return expTy(NULL, actual_ty(callinfo->u.fun.result));
@@ -377,7 +379,7 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
                 }
 
                 /* 判断 record 中的 fields 的定义是否匹配 */
-                if (efields_match(v, t, recordty, e)) {
+                if (efields_match(level, v, t, recordty, e)) {
                     return expTy(NULL, recordty);
                 }
             }
@@ -393,8 +395,8 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             }
 
             /* 判断数组大小，默认值类型 是否与数组定义一致*/
-            final2 = transExp(v, t, e->u.array.size);
-            final3 = transExp(v, t, e->u.array.init); /* 数组的默认值 如 int a[2]='test' */
+            final2 = transExp(level, v, t, e->u.array.size);
+            final3 = transExp(level, v, t, e->u.array.init); /* 数组的默认值 如 int a[2]='test' */
 
             if (final2.ty->kind != Ty_int) {
                 EM_error(e->pos, "array size should be int \n");
@@ -417,10 +419,10 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
 
             /* 遍历list, 排队添加入全局环境 */
             while (list->tail) {
-                transExp(v, t, list->head);
+                transExp(level, v, t, list->head);
                 list = list->tail;
             }
-            return transExp(v, t, list->head);
+            return transExp(level, v, t, list->head);
 
             /* while 表达式 */
         case A_whileExp:
@@ -428,13 +430,13 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             EM_pfun(e->pos, "====> A_whileExp\n");
 
             /* while() 中止条件判断，应该是 int (0, 1) */
-            final = transExp(v, t, e->u.whilee.test);
+            final = transExp(level, v, t, e->u.whilee.test);
             if (final.ty->kind != Ty_int) {
                 EM_error(e->pos, "while() condition should be int 1/0 \n");
             }
 
             /* while 函数体则没有要求 */
-            transExp(v, t, e->u.whilee.body);
+            transExp(level, v, t, e->u.whilee.body);
             return expTy(NULL, Ty_Void());
 
 
@@ -443,8 +445,8 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
 
             EM_pfun(e->pos, "====> A_assignExp\n");
 
-            assVar = transVar(v, t, e->u.assign.var);
-            assExp = transExp(v, t, e->u.assign.exp);
+            assVar = transVar(level, v, t, e->u.assign.var);
+            assExp = transExp(level, v, t, e->u.assign.exp);
 
             /* 判断赋值类型与定义类型是否一致 */
             if (!ty_match(assVar.ty, assExp.ty)) {
@@ -468,8 +470,8 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             EM_pfun(e->pos, "====> A_forExp\n");
 
             /* struct {S_symbol var; A_exp lo,hi,body; bool escape;} forr; */
-            for_from = transExp(v, t, e->u.forr.lo);
-            for_to = transExp(v, t, e->u.forr.hi);
+            for_from = transExp(level, v, t, e->u.forr.lo);
+            for_to = transExp(level, v, t, e->u.forr.hi);
 
             if ((for_from.ty->kind != Ty_int) || (for_to.ty->kind != Ty_int)) {
                 EM_error(e->pos, "the from , to is not number. \n");
@@ -480,7 +482,7 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             /* 声明 int i 的初始化 */
             transDec(level, v, t, A_VarDec(e->pos, e->u.forr.var, S_Symbol("int"), e->u.forr.lo));
             /* 函数体 */
-            for_body = transExp(v, t, e->u.forr.body);
+            for_body = transExp(level, v, t, e->u.forr.body);
             S_endScope(v);
 
             return expTy(NULL, Ty_Void());
@@ -502,7 +504,7 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             }
 
             /* 转义 let 的函数体 */
-            let_body = transExp(v, t, e->u.let.body);
+            let_body = transExp(level, v, t, e->u.let.body);
 
             S_endScope(t);
             S_endScope(v);
@@ -516,8 +518,8 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             EM_pfun(e->pos, "====> A_opExp\n");
 
             op = e->u.op.oper;  /* 符号 */
-            left = transExp(v, t, e->u.op.left);
-            right = transExp(v, t, e->u.op.right);
+            left = transExp(level, v, t, e->u.op.left);
+            right = transExp(level, v, t, e->u.op.right);
             A_exp rr = e->u.op.right;
 
             /* 加减乘除 +,-,*,/ */
@@ -577,8 +579,8 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
 
             EM_pfun(e->pos, "====> A_ifExp \n");
 
-            if_if = transExp(v, t, e->u.iff.test);
-            if_then = transExp(v, t, e->u.iff.then);
+            if_if = transExp(level, v, t, e->u.iff.test);
+            if_then = transExp(level, v, t, e->u.iff.then);
 
             if (if_if.ty->kind != Ty_int) {
                 EM_error(e->pos, "the exp in if() is not 1/0\n");
@@ -587,7 +589,7 @@ static struct expty transExp(Tr_level  level, S_table v, S_table t, A_exp e) {
             /* 包含 else 部分，返回类型要和 then 部分一致 */
             if (e->u.iff.elsee) {
 
-                if_else = transExp(v, t, e->u.iff.elsee);
+                if_else = transExp(level, v, t, e->u.iff.elsee);
                 if (!ty_match(if_then.ty, if_else.ty)) {
                     EM_error(e->pos, "return type of then and else should be the same.\n");
                 }
@@ -654,7 +656,7 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
             struct expty final;
 
             // 获取要初始化的值类型 (有可能是 int, string, record 等 ... )
-            e = transExp(v, t, d->u.var.init); /* 初始化 */
+            e = transExp(level, v, t, d->u.var.init); /* 初始化 */
 
             // 1. 声明 var id : type-id := exp 指明变量类型
             if (d->u.var.typ != NULL) {
@@ -665,12 +667,9 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
                 if (tt == NULL) {
                     // 定义的类型 d->u.var.typ 找不到
                     EM_error(d->pos, " you name a var with type, but the type do not existed. ");
-                    S_enter(v, d->u.var.var, E_VarEntry(varTrAccess(level), NULL, Ty_Int()));
+                    S_enter(v, d->u.var.var, E_VarEntry(varTrAccess(level), Ty_Int()));
                 }
-
                 // 生成变量的  Tr_access
-
-
                 S_enter(v, d->u.var.var, E_VarEntry(varTrAccess(level), tt));
                 EM_pfun(d->pos, " ==========> after var dec,  name: %s ,  type: %s \n", S_name(d->u.var.var),
                         S_name(d->u.var.typ));
@@ -681,15 +680,13 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
             printf("var dec without named type. \n");
             EM_pfun(d->pos, ">>>var %s, named type(exp): %d \n", S_name(d->u.var.var), e.ty->kind);
             S_enter(v, d->u.var.var, E_VarEntry(varTrAccess(level), e.ty));
-
             return;
-            break;
 
-        /* 声明函数
-         fundec →   function id ( tyfields) = exp
-                →   function id ( tyfields) : type-id = exp
-         只要判断函数返回值类型，参数类型 是否是存在的 type 即可
-         */
+            /* 声明函数
+             fundec →   function id ( tyfields) = exp
+                    →   function id ( tyfields) : type-id = exp
+             只要判断函数返回值类型，参数类型 是否是存在的 type 即可
+             */
         case A_functionDec:
 
             EM_pfun(d->pos, "loop functions dec.\n");
@@ -717,8 +714,8 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
                 formalTys = makeFormalTyList(t, fdecl->head->params);
 
                 // 1.4 函数声明，添加栈帧
-                printf("found function, update frame")
-                Tr_level level = newLevel(formalTys);
+                printf("found function, update frame");
+                Tr_level level = newLevel(level, formalTys);
                 Temp_label lable = fdec->name;
 
                 // 1.5 将函数 添加进全局类型环境
@@ -740,16 +737,15 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
                     /* S_enter(S_table: 值环境,
                      * S_symbol sym : fieldlist 中 field 的 name 符号,
                      * void *value : 形参); */
-                    S_enter(v, fl->head->name, E_VarEntry(varTrAccess(), ts->head));
+                    S_enter(v, fl->head->name, E_VarEntry(varTrAccess(level), ts->head));
                 }
 
-                funbody = transExp(v, t, fdec->body);  /* 函数体 */
+                funbody = transExp(level, v, t, fdec->body);  // 函数体
                 fentry = S_look(v, fdec->name); /* 函数入口 */
 
                 if (!ty_match(fentry->u.fun.result, funbody.ty)) {
                     EM_error(d->pos, "result type is not the same as the func body return type. \n");
                 }
-
                 S_endScope(v);
             }
             break;
@@ -956,21 +952,10 @@ static U_boolList boolListFormalTys(Ty_tyList formalTys) {
 }
 
 // 本地变量
-static Tr_access varTrAccess(Tr_level level){
+static Tr_access varTrAccess(Tr_level level) {
     return Tr_allocLocal(level);
 }
 
-static Tr_level newLevel(Ty_tyList formalTys) {
-    // ...Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals);
-    Tr_newLevel(globalLevel, Temp_newlabel(), boolListFormalTys(formalTys))
-}
-
-// 退出函数，则 globalLevel 退回上一级
-static void quitFun() {
-    globalLevel = Tr_getParent(globalLevel);
-}
-
-// 进入函数，则 globalLevel 增加一层
-static void enterFun(Ty_tyList formalTys) {
-    globalLevel = newLevel(formalTys);
+static Tr_level newLevel(Tr_level level, Ty_tyList formalTys) {
+    return Tr_newLevel(level, Temp_newlabel(), boolListFormalTys(formalTys));
 }
