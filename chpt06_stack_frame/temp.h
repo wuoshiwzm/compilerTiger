@@ -1,7 +1,6 @@
-/*
- * temp.h 
- *
- */
+#ifndef _TEMP_H_
+#define _TEMP_H_
+
 
 typedef struct Temp_temp_ *Temp_temp;
 Temp_temp Temp_newtemp(void);
@@ -12,6 +11,7 @@ Temp_tempList Temp_TempList(Temp_temp h, Temp_tempList t);
 
 // Temp_label 就是符号！
 typedef S_symbol Temp_label;
+
 Temp_label Temp_newlabel(void);
 Temp_label Temp_namedlabel(string name);
 string Temp_labelstring(Temp_label s);
@@ -28,3 +28,6 @@ string Temp_look(Temp_map m, Temp_temp t);
 void Temp_dumpMap(FILE *out, Temp_map m);
 
 Temp_map Temp_name(void);
+
+
+#endif
