@@ -350,4 +350,3 @@ A_efieldList A_EfieldList(A_efield head, A_efieldList tail)
  p->tail=tail;
  return p;
 }
-
