@@ -1,3 +1,6 @@
+#ifndef _ENV_H_
+#define _ENV_H_
+
 #include "translate.h"
 #include "temp.h"
 #include "types.h"
@@ -16,8 +19,11 @@ struct E_enventry_ {
 };
 
 E_enventry E_VarEntry(Tr_access access, Ty_ty ty);
-E_enventry E_FunEntry(Tr_level level, Temp_label label, Ty_tyList formals, Ty_ty result)
+E_enventry E_FunEntry(Tr_level level, Temp_label label, Ty_tyList formals, Ty_ty result);
 
 
 static S_table E_base_tenv(void);  /* 类型环境 Ty_ ty environment */
 static S_table E_base_venv(void);  /* 值环境  E_ enventry environment */
+
+
+#endif
