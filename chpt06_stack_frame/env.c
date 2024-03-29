@@ -13,7 +13,6 @@ S_table E_base_tenv(void) {
     return init_t;
 }
 
-//E_FunEntry(Tr_level level, Temp_label label, Ty_tyList formals, Ty_ty result)
 /*
 初始化全局值环境 val environment 的符号表
 初始化时全局只有 tiger 的标准函数 在值环境中 
@@ -74,7 +73,6 @@ S_table E_base_venv(void) {
     S_enter( t, S_Symbol("concat"),
             E_FunEntry( level, Temp_newlabel(), Ty_TyList(Ty_String(), Ty_TyList(Ty_String(), NULL)), Ty_String())
     );
-
 
     /*
     function not(i : integer) : integer
