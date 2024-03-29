@@ -1,3 +1,6 @@
+#ifndef _TYPES_H_
+#define _TYPES_H_
+
 /*
  * types.h - 类型结构
  *
@@ -55,3 +58,5 @@ Ty_fieldList Ty_FieldList(Ty_field head, Ty_fieldList tail);
 
 void Ty_print(Ty_ty t);
 void TyList_print(Ty_tyList list);
+
+#endif
