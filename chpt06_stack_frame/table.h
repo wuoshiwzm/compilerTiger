@@ -1,3 +1,5 @@
+#ifndef _TABLE_H_
+#define _TABLE_H_
 /**
     符号表
 */
@@ -28,3 +30,4 @@ void TAB_show_tenv(TAB_table);
 
 void TAB_show_venv(TAB_table);
 
+#endif
