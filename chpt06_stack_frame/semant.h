@@ -1,18 +1,14 @@
 #ifndef _SEMANT_H_
 #define _SEMANT_H_
 
-#include "util.h"
-#include "errormsg.h"
-#include "symbol.h"
-#include "absyn.h"
-#include "types.h"
-#include "frame.h"
-#include "myframe.h"
-#include "translate.h"
 /**
     语义分析-类型检查
 */
 void SEM_transProg(A_exp exp);
+
+
+static S_table E_base_tenv(void);  /* 类型环境 Ty_ ty environment */
+static S_table E_base_venv(void);  /* 值环境  E_ enventry environment */
 
 
 /* 将变量 转义成表达式类型 */

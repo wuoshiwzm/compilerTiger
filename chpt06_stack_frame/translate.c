@@ -5,9 +5,9 @@
 #include "symbol.h"
 #include "temp.h"
 #include "table.h"
+#include "types.h"
 #include "frame.h"
 #include "myframe.h"
-#include "escape.h"
 #include "translate.h"
 
 struct Tr_level_{
@@ -19,7 +19,7 @@ struct Tr_level_{
 
 struct Tr_access_{
     Tr_level level;
-    F_access access
+    F_access access;
 };
 
 /*
@@ -50,7 +50,7 @@ Tr_level Tr_getParent(Tr_level level){
     if(level == outermost){
         return outermost;
     }else{
-        return level->parent
+        return level->parent;
     }
 }
 
@@ -96,4 +96,10 @@ Tr_access Tr_allocLocal(Tr_level level){
     // 获取 level 的 frame 的 allocLocal， F_access
     tr_acc->access = F_allocLocal(level->frame);
     return tr_acc;
+}
+
+void Tr_printLevel(Tr_level level){
+    printf("--------print Level--------");
+	printf("Level: depth = %d \n", level->depth);
+//	printf("Level: depth = %d; name = %s\n", level->depth, S_name(F_name(level->frame)));
 }

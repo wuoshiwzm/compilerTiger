@@ -1,11 +1,15 @@
 /*
  * parse.c - Parse source file.
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "util.h"
 #include "symbol.h"
+#include "types.h"
+#include "temp.h"
+#include "translate.h"
+#include "myframe.h"
+#include "env.h"
 #include "absyn.h"
 #include "errormsg.h"
 #include "parse.h"

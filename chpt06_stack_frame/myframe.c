@@ -6,6 +6,7 @@
 #include "table.h"
 #include "util.h"
 #include "symbol.h"
+#include "types.h"
 
 // tree
 //#include "tree.h"

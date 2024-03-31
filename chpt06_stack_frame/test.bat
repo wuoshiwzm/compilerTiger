@@ -21,23 +21,30 @@ gcc -g -c tiger.tab.c
 gcc -g -c errormsg.c
 gcc -g -c prabsyn.c
 
-gcc -g -c table.c
 gcc -g -c absyn.c
 gcc -g -c symbol.c
-gcc -g -c parse.c
-gcc -g -c parsetest.c
-
-gcc -g -c semant.c
-gcc -g -c env.c
 gcc -g -c types.c
 
+gcc -g -c temp.c
+gcc -g -c myframe.c
+gcc -g -c translate.c
 
-gcc -g parse.o tiger.tab.o lex.yy.o errormsg.o util.o table.o absyn.o symbol.o prabsyn.o semant.o types.o env.o
+
+gcc -g -c table.c
+gcc -g -c parse.c
+gcc -g -c parsetest.c
+gcc -g -c env.c
+
+gcc -g -c semant.c
+
+gcc -g parse.o tiger.tab.o lex.yy.o errormsg.o util.o table.o absyn.o symbol.o prabsyn.o types.o env.o semant.o temp.o myframe.o translate.o
 
 echo "testing test file ..."
 
-set "folder_path=.\testfiles"
-a.exe ".\testfiles\test.tig"
+a.exe "..\testfiles\test.tig"
+
+
+
 @REM a.exe ".\testfiles\testt.tig"
 @REM for /R "%folder_path%" %%F in (*.tig) do (
 @REM     echo "testing file now :::"

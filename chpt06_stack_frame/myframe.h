@@ -1,6 +1,8 @@
 #ifndef COMPILER_TIGER_MASTER_MYFRAME_H_
 #define COMPILER_TIGER_MASTER_MYFRAME_H_
 
+#include "frame.h"
+
 struct F_frame_ {
     int offset; // 偏移量 什么的偏移量？
     int locals; // 局部变量在栈帧中占用的空间

@@ -7,6 +7,9 @@
 #include "table.h"
 #include "symbol.h"
 #include "types.h"
+#include "temp.h"
+#include "translate.h"
+#include "myframe.h"
 #include "env.h"
 
 // 为什么符号表中 table属性 数组的长度是 127???????

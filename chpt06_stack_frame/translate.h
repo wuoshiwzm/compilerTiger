@@ -1,18 +1,14 @@
 #ifndef _TRANSLATE_H_
 #define _TRANSLATE_H_
 
-
-#include "temp.h"
-#include "types.h"
-
 // translate 相对于 frame 模块， 增加了 Level 概念，对应函数嵌套
 typedef void * Tr_exp;
 
 // 表达式类型
-struct expty {Tr_exp exp; Ty_ty ty;};
+static struct expty {Tr_exp exp; Ty_ty ty;};
 
 // 构造函数
-struct expty expTy(Tr_exp e, Ty_ty t) {
+static struct expty expTy(Tr_exp e, Ty_ty t) {
 	struct expty et;
 	et.exp = e;
 	et.ty  = t;
@@ -55,12 +51,5 @@ Tr_access Tr_allocLocal(Tr_level level);
 /*
  * 中间代码
  */
-//typedef struct Tr_exp_ *Tr_exp;
-//typedef struct Tr_expList_ *Tr_expList;
-//struct Tr_expList_{
-//    Tr_exp head;
-//    Tr_expList tail;
-//};
-//Tr_expList Tr_ExpList(Tr_exp head, Tr_expList tail);
 
 #endif
