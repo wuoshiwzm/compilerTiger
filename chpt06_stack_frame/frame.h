@@ -1,7 +1,6 @@
 #ifndef COMPILER_TIGER_MASTER_FRAME_H
 #define COMPILER_TIGER_MASTER_FRAME_H
 
-#include "temp.h"
 
 /*
     栈帧存什么？    实参， 局部变量
