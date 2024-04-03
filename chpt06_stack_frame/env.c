@@ -3,6 +3,7 @@
 #include "symbol.h"
 #include "types.h"
 #include "temp.h"
+#include "frame.h"
 #include "myframe.h"
 #include "translate.h"
 #include "env.h"
