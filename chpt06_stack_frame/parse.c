@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
         pr_exp(stdout, temp, 4);
         printf("\n-------------------------\n");
 
-		SEM_transProg(temp);
+        SEM_transProg(temp);
 	}
 	return 0;
 }
