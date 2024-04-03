@@ -38,13 +38,15 @@ static Tr_access varTrAccess();
 
 // 新的level 意味着发生 函数嵌套声明，则必然有 formals
 // ...Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals);
-static Tr_level newLevel(Tr_level level, Ty_tyList formalTys);
+static Tr_level newLevel(Tr_level level, Ty_tyList formalTys, S_symbol funname);
 
 
-// 退出函数，则 globalLevel 退回上一级
-static void quitFun();
+// 表达式类型
+static struct expty {
+    Tr_exp exp;
+    Ty_ty ty;
+};
 
-// 进入函数，则 globalLevel 增加一层
-static void enterFun(Ty_tyList formalTys);
+struct expty expTy(Tr_exp exp, Ty_ty ty);
 
 #endif
