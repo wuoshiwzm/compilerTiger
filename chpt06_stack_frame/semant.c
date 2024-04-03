@@ -48,15 +48,12 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
 #include "util.h"
 #include "symbol.h"
 #include "errormsg.h"
 #include "types.h"
 #include "absyn.h"
 #include "temp.h"
-#include "frame.h"
 #include "translate.h"
 #include "env.h"
 #include "semant.h"
@@ -67,15 +64,25 @@ void SEM_transProg(A_exp exp) {
     S_table t = E_base_tenv(); /* 类型环境 */
     S_table v = E_base_venv(); /* 值环境 */
 
+    printf("create base level: mainLevel\n");
     Tr_level mainLevel = Tr_newLevel(Tr_outermost(), Temp_namedlabel("__main"), NULL);
+    Tr_printLevel(mainLevel);
 
     // 把 level 带进来
-    et = transExp(mainLevel, v, t, exp);
+    transExp(mainLevel, v, t, exp);
     printf("============================= done =============================...");
 
     /* 基础类型 */
 //    string* enums[16] = {"Ty_record", "Ty_nil", "Ty_int", "Ty_string", "Ty_array", "Ty_name", "Ty_void", "Ty_double"};
 //    printf("@this expr return %s \n", enums[et.ty->kind]);
+}
+
+// 构造函数
+struct expty expTy(Tr_exp e, Ty_ty t) {
+    struct expty et;
+    et.exp = e;
+    et.ty = t;
+    return et;
 }
 
 /* 获取 ty 的原生类型 */
@@ -229,6 +236,10 @@ static struct expty transVar(Tr_level level, S_table venv, S_table tenv, A_var v
                 /* 固定返回 int, 让编译器继续往下走。 */
                 return expTy(NULL, Ty_Int());
             }
+
+
+
+
             break;
 
             /*
@@ -304,6 +315,8 @@ static struct expty transVar(Tr_level level, S_table venv, S_table tenv, A_var v
  * @return 返回结构体struct expty  {Tr_exp exp; Ty_ty ty;};
  */
 static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
+    printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>call transExp\n ");
+    printf("e->kind = A_varExp?  %s\n", e->kind== A_varExp? "true":"false");
 
     /* 打印当前的表达式类型 */
     string *enums[16] = {"A_varExp", "A_nilExp", "A_intExp", "A_doubleExp", "A_stringExp", "A_callExp",
@@ -317,29 +330,31 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 
     struct expty left, right, final, final2, final3, final4, final5, lo, hi;
     struct expty assVar, assExp;
-
     struct expty for_from, for_to, for_body;
     struct expty let_body;
-
     struct expty if_if, if_then, if_else;
-
     A_oper op;
+
+//    printf("e->kind = A_varExp?  %s\n", e->kind== A_varExp? "true":"false");
+//    Tr_printLevel(level);
 
     switch (e->kind) {
 
         /* 变量表达式 */
         case A_varExp:
-            EM_pfun(e->pos, "====> A_varExp\n");
+            // EM_pfun(e->pos, "====> A_varExp\n");
+            printf(" exp.ty: %d\n", transVar(level, v, t, e->u.var).ty->kind);
+
             return transVar(level, v, t, e->u.var);
 
             /* NIL 表达式 */
         case A_nilExp:
-            EM_pfun(e->pos, "====> A_nilExp\n");
+            // EM_pfun(e->pos, "====> A_nilExp\n");
             return expTy(NULL, Ty_Nil());
 
             /* 调用表达式 */
         case A_callExp:
-            EM_pfun(e->pos, "====> A_callExp\n");
+            // EM_pfun(e->pos, "====> A_callExp\n");
             /* 获取调用信息 在值环境 v 中查找函数 func 的参数，返回值 */
             callinfo = S_look(v, e->u.call.func);
 
@@ -365,7 +380,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 
             /* record 表达式 */
         case A_recordExp:
-            EM_pfun(e->pos, "====> A_recordExp\n");
+            // EM_pfun(e->pos, "====> A_recordExp\n");
 
             /* 在类型环境 tenv 中查找符号 e->u.record.typ 绑定的类型  */
             recordty = actual_ty(S_look(t, e->u.record.typ));
@@ -385,7 +400,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
             return expTy(NULL, Ty_Record(NULL));
 
         case A_arrayExp:
-            EM_pfun(e->pos, "====> A_arrayExp\n");
+            // EM_pfun(e->pos, "====> A_arrayExp\n");
 
             arrayty = actual_ty(S_look(t, e->u.array.typ));
 
@@ -408,7 +423,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 
             /* 表达式列表：按每一个表达式转义 */
         case A_seqExp:
-            EM_pfun(e->pos, "====> A_seqExp\n");
+            // EM_pfun(e->pos, "====> A_seqExp\n");
 
             list = e->u.seq;
 
@@ -426,7 +441,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
             /* while 表达式 */
         case A_whileExp:
 
-            EM_pfun(e->pos, "====> A_whileExp\n");
+            // EM_pfun(e->pos, "====> A_whileExp\n");
 
             /* while() 中止条件判断，应该是 int (0, 1) */
             final = transExp(level, v, t, e->u.whilee.test);
@@ -442,7 +457,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
             /* 赋值表达式  var := exp */
         case A_assignExp:
 
-            EM_pfun(e->pos, "====> A_assignExp\n");
+            // EM_pfun(e->pos, "====> A_assignExp\n");
 
             assVar = transVar(level, v, t, e->u.assign.var);
             assExp = transExp(level, v, t, e->u.assign.exp);
@@ -458,7 +473,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
             /* break表达式 */
         case A_breakExp:
 
-            EM_pfun(e->pos, "====> A_breakExp\n");
+            // EM_pfun(e->pos, "====> A_breakExp\n");
 
             return expTy(NULL, Ty_Void());
 
@@ -466,7 +481,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
             /* for表达式 */
         case A_forExp:
 
-            EM_pfun(e->pos, "====> A_forExp\n");
+            // EM_pfun(e->pos, "====> A_forExp\n");
 
             /* struct {S_symbol var; A_exp lo,hi,body; bool escape;} forr; */
             for_from = transExp(level, v, t, e->u.forr.lo);
@@ -491,7 +506,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
              * let ...decs... in ...exp_body... end */
         case A_letExp:
 
-            EM_pfun(e->pos, "====> A_letExp\n");
+            // EM_pfun(e->pos, "====> A_letExp\n");
 
             /* 声明只在域scope内有效 */
             S_beginScope(v);
@@ -514,7 +529,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
              A_eqOp, A_neqOp, A_ltOp, A_leOp, A_gtOp, A_geOp} A_oper; */
         case A_opExp:
 
-            EM_pfun(e->pos, "====> A_opExp\n");
+            // EM_pfun(e->pos, "====> A_opExp\n");
 
             op = e->u.op.oper;  /* 符号 */
             left = transExp(level, v, t, e->u.op.left);
@@ -576,7 +591,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
             /* if表达式 */
         case A_ifExp:
 
-            EM_pfun(e->pos, "====> A_ifExp \n");
+            // EM_pfun(e->pos, "====> A_ifExp \n");
 
             if_if = transExp(level, v, t, e->u.iff.test);
             if_then = transExp(level, v, t, e->u.iff.then);
@@ -660,7 +675,7 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
             // 1. 声明 var id : type-id := exp 指明变量类型
             if (d->u.var.typ != NULL) {
                 printf("var dec with named type. \n");
-                EM_pfun(d->pos, ">>>var %s, named type: %s\n", S_name(d->u.var.var), S_name(d->u.var.typ));
+                // EM_pfun(d->pos, ">>>var %s, named type: %s\n", S_name(d->u.var.var), S_name(d->u.var.typ));
                 // 查找类型对应的 符号
                 tt = S_look(t, d->u.var.typ);
                 if (tt == NULL) {
@@ -669,15 +684,16 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
                     S_enter(v, d->u.var.var, E_VarEntry(varTrAccess(level), Ty_Int()));
                 }
                 // 生成变量的  Tr_access
-                S_enter(v, d->u.var.var, E_VarEntry(varTrAccess(level), tt));
-                EM_pfun(d->pos, " ==========> after var dec,  name: %s ,  type: %s \n", S_name(d->u.var.var),
-                        S_name(d->u.var.typ));
+                Tr_access newAccess = varTrAccess(level);
+                Tr_printAccess(newAccess);
+                S_enter(v, d->u.var.var, E_VarEntry(newAccess, tt));
+                // EM_pfun(d->pos, " ==========> after var dec,  name: %s ,  type: %s \n", S_name(d->u.var.var), S_name(d->u.var.typ));
                 return;
             }
 
             // 2. 声明 var id := exp, 未指明变量类型
             printf("var dec without named type. \n");
-            EM_pfun(d->pos, ">>>var %s, named type(exp): %d \n", S_name(d->u.var.var), e.ty->kind);
+            // EM_pfun(d->pos, ">>>var %s, named type(exp): %d \n", S_name(d->u.var.var), e.ty->kind);
             S_enter(v, d->u.var.var, E_VarEntry(varTrAccess(level), e.ty));
             return;
 
@@ -688,13 +704,13 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
              */
         case A_functionDec:
 
-            EM_pfun(d->pos, "loop functions dec.\n");
+            // EM_pfun(d->pos, "loop functions dec.\n");
 
             // 1.函数添加进全局环境
             for (fdecl = d->u.function; fdecl; fdecl = fdecl->tail) {
 
                 // 1.1 解析函数
-                EM_pfun(fdecl->head->pos, "func name: %s \n", S_name(fdecl->head->name));
+                // EM_pfun(fdecl->head->pos, "func name: %s \n", S_name(fdecl->head->name));
 
                 // 1.2 判断返回值
                 // 有返回值 fdec->head->result(symbol)
@@ -713,21 +729,20 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
                 formalTys = makeFormalTyList(t, fdecl->head->params);
 
                 // 1.4 函数声明，添加栈帧
-                printf("found function, update frame");
-                Tr_level level = newLevel(level, formalTys);
-                Temp_label lable = fdec->name;
-
+                printf("found function, new level");
+                Tr_level nlevel = newLevel(level, formalTys, fdecl->head->name);
+                Tr_printLevel(nlevel);
+                Temp_label lable = fdecl->head->name;
                 // 1.5 将函数 添加进全局类型环境
-                Tr_printLevel(level);
-                S_enter(v, d->u.var.var, E_FunEntry(level, lable, formalTys, fun_ty));
+                S_enter(v, d->u.var.var, E_FunEntry( NULL, lable, formalTys, fun_ty));
             }
 
             // 2.形参类型检查
-            EM_pfun(d->pos, " start check the formals of function\n");
+            // EM_pfun(d->pos, " start check the formals of function\n");
 
             for (fdecl = d->u.function; fdecl; fdecl = fdecl->tail) {
                 fdec = fdecl->head;
-                EM_pfun(fdec->pos, " start check the formals of function for func: %s\n", S_name(fdec->name));
+                // EM_pfun(fdec->pos, " start check the formals of function for func: %s\n", S_name(fdec->name));
 
                 S_beginScope(v);
                 formalTys = makeFormalTyList(t, fdec->params);
@@ -764,7 +779,7 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
                 var row := arrtype[10] of 0
                 var row2 := arrtype[11] of 1
             */
-            EM_pfun(d->pos, " start A_typeDec \n");
+            // EM_pfun(d->pos, " start A_typeDec \n");
 
 
             // 1. 判断不同类型是否同名
@@ -776,7 +791,7 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
                 /* 将符号 name 添加进 类型环境 t 中，添加绑定: sym->value
                  void S_enter(S_table t, S_symbol sym, void *value);
                  这里 value 给个 NULL */
-                EM_pfun(d->pos, "new type name:  %s \n", S_name(nl->head->name));
+                // EM_pfun(d->pos, "new type name:  %s \n", S_name(nl->head->name));
                 S_enter(t, nl->head->name, Ty_Name(nl->head->name, NULL));
             }
 
@@ -830,7 +845,7 @@ static void transDec(Tr_level level, S_table v, S_table t, A_dec d) {
  * 返回类型声明部分 具体的类型 Ty_ty*/
 static Ty_ty transTy(S_table tb, A_ty ty) {
 
-    EM_pfun(ty->pos, " start transTy.... \n");
+    // EM_pfun(ty->pos, " start transTy.... \n");
 
     Ty_ty tt = NULL;
     Ty_fieldList fieldTys;
@@ -838,7 +853,7 @@ static Ty_ty transTy(S_table tb, A_ty ty) {
     switch (ty->kind) {
 
         case A_nameTy:  /* type mytype = intt 中的 intt, 判断是否是已经定义过的 类型*/
-            EM_pfun(ty->pos, "  A_nameTy.... \n");
+            // EM_pfun(ty->pos, "  A_nameTy.... \n");
 
             tt = S_look(tb, ty->u.name);
             if (!tt) {
@@ -847,7 +862,7 @@ static Ty_ty transTy(S_table tb, A_ty ty) {
             return tt;
 
         case A_recordTy:  /* type mytype = {a:intt, b:str} 中的 {a:intt, b:str}*/
-            EM_pfun(ty->pos, "  A_recordTy.... \n");
+            // EM_pfun(ty->pos, "  A_recordTy.... \n");
 
             fieldTys = makeFieldTys(tb, ty->u.record);
 
@@ -855,7 +870,7 @@ static Ty_ty transTy(S_table tb, A_ty ty) {
             return Ty_Record(fieldTys);
 
         case A_arrayTy:   /* type mytype = array of intt 中的 array of intt*/
-            EM_pfun(ty->pos, "  A_arrayTy.... \n");
+            // EM_pfun(ty->pos, "  A_arrayTy.... \n");
 
             /* 查找符号 S_symbol array 对应的类型，就是要返回的类型 */
             tt = S_look(tb, ty->u.array);
@@ -935,11 +950,12 @@ static Ty_tyList makeFormalTyList(S_table t, A_fieldList fl) {
 /* -----------------------------------------------------  栈帧  ----------------------------------------------------- */
 
 static U_boolList boolListFormalTys(Ty_tyList formalTys) {
+    printf("call boolListFormalTys\n");
     Ty_tyList tlist = formalTys;
     U_boolList boolList_head = NULL;
     U_boolList boolList = NULL;
-
     for (; tlist != NULL; tlist = tlist->tail) {
+        // 更新 boolList_head 和 boolList
         if (boolList_head == NULL) {
             boolList = U_BoolList(TRUE, NULL);
             boolList_head = boolList;
@@ -956,8 +972,8 @@ static Tr_access varTrAccess(Tr_level level) {
     return Tr_allocLocal(level);
 }
 
-static Tr_level newLevel(Tr_level level, Ty_tyList formalTys) {
-    return Tr_newLevel(level, Temp_newlabel(), boolListFormalTys(formalTys));
+static Tr_level newLevel(Tr_level level, Ty_tyList formalTys, S_symbol funname) {
+    return Tr_newLevel(level, Temp_namedlabel(S_name(funname)), boolListFormalTys(formalTys));
 }
 
 /* 初始化类型环境 Ty_ ty environment 的符号表 */
@@ -971,76 +987,77 @@ S_table E_base_tenv(void) {
 }
 
 /*
-初始化全局值环境 val environment 的符号表
-初始化时全局只有 tiger 的标准函数 在值环境中
-*/
+ * 初始化全局值环境 val environment 的符号表
+ * 初始化时全局只有 tiger 的标准函数 在值环境中
+ */
 S_table E_base_venv(void) {
     S_table t = S_empty();
-    Tr_level level;
+    Tr_level level = NULL;
 
     /*
     function print(s : string)
         Print s on standard output.
     */
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("print"), U_BoolList(TRUE, NULL));
     S_enter(t, S_Symbol("print"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_String(), NULL), Ty_Void()));
-
     /*
     function flush()
         Flush the standard output buffer.
     */
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("flush"), NULL);
     S_enter(t, S_Symbol("flush"), E_FunEntry(level, Temp_newlabel(), NULL, Ty_Void()));
-
     /*
     function getchar() : string
         Read a character from standard input; return empty string on end of file.
     */
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("getchar"), NULL);
     S_enter(t, S_Symbol("getchar"), E_FunEntry(level, Temp_newlabel(), NULL, Ty_String()));
-
     /*
     function ord(s: string) : int
         Give ASCII value of first character of s; yields -1 if s is empty string. ord 函数， 获取字符（不是字符串）对应的 ASC 码
     */
-    S_enter( t, S_Symbol("ord"), E_FunEntry(level, Temp_newlabel(),Ty_TyList(Ty_String(), NULL), Ty_Int()) );
-
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("ord"), U_BoolList(TRUE, NULL));
+    S_enter(t, S_Symbol("ord"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_String(), NULL), Ty_Int()));
     /*
     function chr(i: int) : string
         Single-character string from ASCII value i; halt program if i out of range.
     */
-    S_enter( t, S_Symbol("chr"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_Int(), NULL), Ty_String()) );
-
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("chr"), U_BoolList(TRUE, NULL));
+    S_enter(t, S_Symbol("chr"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_Int(), NULL), Ty_String()));
     /*
     function size(s: string) : int
         Number of characters in s.
     */
-    S_enter( t, S_Symbol("size"), E_FunEntry(level, Temp_newlabel(),Ty_TyList(Ty_String(), NULL), Ty_Int()) );
-
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("size"), U_BoolList(TRUE, NULL));
+    S_enter(t, S_Symbol("size"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_String(), NULL), Ty_Int()));
     /*
     function substring(s:string, first:int, n:int) : string
         Substring of string s, starting with character first, n characters long. Char-acters are numbered starting at 0.
     */
-    S_enter( t, S_Symbol("substring"),
-            E_FunEntry(level, Temp_newlabel(),
-                       Ty_TyList( Ty_String(), Ty_TyList(Ty_Int(), Ty_TyList(Ty_Int(), NULL))), Ty_String())
-    );
-
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("substring"),
+                        U_BoolList(TRUE, U_BoolList(TRUE, U_BoolList(TRUE, NULL))));
+    S_enter(t, S_Symbol("substring"), E_FunEntry(level, Temp_newlabel(),
+                                                 Ty_TyList(Ty_String(), Ty_TyList(Ty_Int(), Ty_TyList(Ty_Int(), NULL))),
+                                                 Ty_String()));
     /*
     function concat (s1: string, s2: string) : string
         Concatenation of s1 and s2.
     */
-    S_enter( t, S_Symbol("concat"),
-            E_FunEntry( level, Temp_newlabel(), Ty_TyList(Ty_String(), Ty_TyList(Ty_String(), NULL)), Ty_String())
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("concat"), U_BoolList(TRUE, U_BoolList(TRUE, NULL)));
+    S_enter(t, S_Symbol("concat"),
+            E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_String(), Ty_TyList(Ty_String(), NULL)), Ty_String())
     );
-
     /*
     function not(i : integer) : integer
         Return (i=0).
     */
-    S_enter( t, S_Symbol("not"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_Int(), NULL), Ty_Int()) );
-
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("not"), U_BoolList(TRUE, NULL));
+    S_enter(t, S_Symbol("not"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_Int(), NULL), Ty_Int()));
     /*
     function exit(i: int)
         Terminate execution with code i.
     */
-    S_enter(t, S_Symbol("exit"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_Int(), NULL), Ty_Void()) );
+    level = Tr_newLevel(Tr_outermost(), Temp_namedlabel("exit"), U_BoolList(TRUE, NULL));
+    S_enter(t, S_Symbol("exit"), E_FunEntry(level, Temp_newlabel(), Ty_TyList(Ty_Int(), NULL), Ty_Void()));
     return t;
 }
