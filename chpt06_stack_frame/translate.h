@@ -4,16 +4,6 @@
 // translate 相对于 frame 模块， 增加了 Level 概念，对应函数嵌套
 typedef void * Tr_exp;
 
-// 表达式类型
-static struct expty {Tr_exp exp; Ty_ty ty;};
-
-// 构造函数
-static struct expty expTy(Tr_exp e, Ty_ty t) {
-	struct expty et;
-	et.exp = e;
-	et.ty  = t;
-	return et;
-}
 
 //  --------------------------- 栈帧部分 ---------------------------  //
 extern const int F_wordSize;
@@ -47,9 +37,6 @@ Tr_accessList Tr_formals(Tr_level level);
 //Tr_access Tr_allocLocal(Tr_level level, bool escape); escape 默认为 TRUE, 进栈帧
 Tr_access Tr_allocLocal(Tr_level level);
 
-
-/*
- * 中间代码
- */
+void Tr_printAccess(Tr_access access);
 
 #endif
