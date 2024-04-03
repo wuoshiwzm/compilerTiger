@@ -10,6 +10,7 @@
 #include "myframe.h"
 #include "translate.h"
 
+
 struct Tr_level_{
     // 层次值
     int depth;
@@ -27,17 +28,20 @@ struct Tr_access_{
  */
 // 全局只有一个 outermost 生成一个最外层的 level,最外层不包含栈帧和形参数据
 static Tr_level outermost = NULL;
-Tr_level Tr_outermost(void){
+Tr_level Tr_outermost(){
     if(outermost == NULL){
-        Tr_level outermost = checked_malloc(sizeof (struct Tr_level_));
-        outermost->depth=0;
-        outermost->frame = NULL;
+        outermost = (Tr_level)checked_malloc(sizeof (struct Tr_level_));
+        outermost->depth = 0;
+//        outermost->frame = NULL;
         outermost->parent = NULL;
+        outermost->frame = F_newFrame(Temp_namedlabel("main"), NULL);
     }
     return outermost;
 }
 
 Tr_level Tr_newLevel(Tr_level parent, Temp_label name, U_boolList formals){
+    printf("new level parent::    ");
+    Tr_printLevel(parent);
     F_frame frame = F_newFrame(name,  U_BoolList(TRUE, formals));// 在 formals 基础上添加一个 为 TRUE 的做为 静态态
     Tr_level level = checked_malloc(sizeof (struct Tr_level_));
     level->parent=parent;
@@ -99,7 +103,25 @@ Tr_access Tr_allocLocal(Tr_level level){
 }
 
 void Tr_printLevel(Tr_level level){
-    printf("--------print Level--------");
-	printf("Level: depth = %d \n", level->depth);
-//	printf("Level: depth = %d; name = %s\n", level->depth, S_name(F_name(level->frame)));
+	printf(" --- Level: depth = %d; name = %s\n", level->depth, S_name(F_name(level->frame)));
+}
+
+// struct Tr_access_{
+//    Tr_level level;
+//    F_access access;
+//};
+
+// struct F_access_ {
+//    enum {
+//        inFrame, inReg
+//    } kind; // 一个调用 是在栈帧中， 还是在 寄存器中
+//    union {
+//        int offset; // 栈帧中， 则看偏移量 offset
+//        Temp_temp reg;  // 寄存器，则看临时寄存器变量 Temp_temp
+//    } u;
+//};
+void Tr_printAccess(Tr_access access){
+    printf( "--- Access:" );
+    Tr_printLevel(access->level);
+    printf( "--- Access offset: %d \n", access->access->u.offset);
 }
