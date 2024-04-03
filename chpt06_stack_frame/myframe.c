@@ -87,38 +87,42 @@ F_access F_staticLink(){
 
 // ***frame 构造, 从形参开始***
 F_frame F_newFrame(Temp_label funname, U_boolList formals){
+//    printf(">>>new frame \n");
+
     // 局部变量都存在 栈帧中
     F_frame  f = (F_frame) checked_malloc(sizeof (struct F_frame_));
     f->begin_label = funname;
     f->locals = 0;
     f->offset = 0; // 为offset 为负数，在 frame pointer 基础上
-    // f->formals 形参都存在栈帧中，不存入 register
 
+    // f->formals 形参都存在栈帧中，不存入 register
     // access, accessList : 对应  F_formals  F_allocLocal  F_staticLink
     F_accessList accList = NULL;
     F_accessList accList_head = NULL;
 
-    for (;formals!= NULL;formals=formals->tail) {
-        // 更新 tail
-        // 给每个 formal 一个 F_accessList, head 是当前的 formal 是在 栈帧中， 还是寄存器中
-        if (accList_head == NULL){
-            accList = (F_accessList) checked_malloc(sizeof (struct F_accessList_));
-            accList_head = accList;
-        }else{
-            accList->tail = (F_accessList) checked_malloc(sizeof (struct F_accessList_));
-            accList = accList->tail;
-        }
+    if (formals != NULL){
+        for (;formals!= NULL;formals=formals->tail) {
+            // 不断更新 tail 为当前的 accList
+            // 给每个 formal 一个 F_accessList, head 是当前的 formal 是在 栈帧中， 还是寄存器中
+            if (accList_head == NULL){
+                accList = (F_accessList) checked_malloc(sizeof (struct F_accessList_));
+                accList_head = accList;
+            }else{
+                accList->tail = (F_accessList) checked_malloc(sizeof (struct F_accessList_));
+                accList = accList->tail;
+            }
 
-        // 更新 head
-        // 形参 默认是在栈帧中，暂时不考虑在 寄存器存
-        if(formals->head == TRUE){
-            accList->head = InFrame(f->offset); // 当前的偏移量
-            f->offset -= F_wordSize; // 形参进入栈帧，offset 后移一个单位 wordsize
-        }else{
-            // 寄存器中的情况...
+            // 更新 head
+            // 形参 默认是在栈帧中，暂时不考虑在 寄存器存
+            if(formals->head == TRUE){
+                accList->head = InFrame(f->offset); // 当前的偏移量
+                f->offset -= F_wordSize; // 形参进入栈帧，offset 后移一个单位 wordsize
+            }else{
+                // 寄存器中的情况...
+            }
         }
+        accList->tail = NULL;
     }
-    accList->tail = NULL;
     f->formals = accList_head;
     return f;
 }
