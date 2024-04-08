@@ -8,6 +8,7 @@
 #include "translate.h"
 #include "env.h"
 
+
 /* 变量类型环境对象 可以添加到外层的 类型 环境中 */
 E_enventry E_VarEntry(Tr_access access, Ty_ty ty) {
     E_enventry venv;
