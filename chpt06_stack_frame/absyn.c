@@ -350,3 +350,31 @@ A_efieldList A_EfieldList(A_efield head, A_efieldList tail)
  p->tail=tail;
  return p;
 }
+
+void printExp(A_exp exp){
+    const char* enums[16] = {
+            "A_varExp", "A_nilExp", "A_intExp", "A_doubleExp", "A_stringExp", "A_callExp", "A_opExp", "A_recordExp",
+            "A_seqExp", "A_assignExp", "A_ifExp", "A_whileExp", "A_forExp", "A_breakExp", "A_letExp", "A_arrayExp"};
+    printf(" ---------->>>>> Exp info, kind: %s ", enums[exp->kind]);
+    if(exp->kind == 0){
+        printf(" (%s)\n",exp->u.stringg);
+    }
+    if(exp->kind == 2){
+        printf("( %d )\n", exp->u.intt);
+    }
+    printf("\n");
+}
+
+void printDec(A_dec dec){
+    const char* enums[16] = { "A_functionDec", "A_varDec", "A_typeDec" };
+    printf("    | \n");
+    printf("     ---------->>>>> Declare info, kind: %s  ", enums[dec->kind]);
+
+    if(dec->kind == 0){
+        printf(" function: %s. \n", S_name( dec->u.function->head->name));
+    }
+
+    if(dec->kind == 1){
+        printf(" var: %s. \n", S_name(dec->u.var.var));
+    }
+}
