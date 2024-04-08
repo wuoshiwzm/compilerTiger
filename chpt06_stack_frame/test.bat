@@ -1,8 +1,6 @@
 
 @echo off
 
-echo "start parsing "
-
 del tiger.output
 del tiger.tab.*
 del *.o
@@ -33,23 +31,18 @@ gcc -g -c translate.c
 gcc -g -c table.c
 gcc -g -c parse.c
 gcc -g -c parsetest.c
-gcc -g -c env.c
-
 gcc -g -c semant.c
-
+gcc -g -c env.c
 gcc -g parse.o tiger.tab.o lex.yy.o errormsg.o util.o table.o absyn.o symbol.o prabsyn.o types.o env.o semant.o temp.o myframe.o translate.o
 
-echo "testing test file ..."
+@REM echo "testing test file ..."
+@REM a.exe ".\testfiles\test2.tig"
+@REM a.exe ".\testfiles\compilable\array_equality.tig"
 
-a.exe "..\testfiles\test.tig"
-
-
-
-@REM a.exe ".\testfiles\testt.tig"
-@REM for /R "%folder_path%" %%F in (*.tig) do (
-@REM     echo "testing file now :::"
-@REM     echo %%F
-@REM     a.exe %%F
-@REM )
+set "folder_path=testfiles\compilable"
+for /R "%folder_path%" %%F in (*.tig) do (
+    echo testing file now : "%%~fF"
+    a.exe %%F
+)
 
 
