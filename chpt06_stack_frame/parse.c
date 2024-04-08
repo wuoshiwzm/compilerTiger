@@ -30,25 +30,26 @@ A_exp parse(string fname)
     if (yyparse() == 0) /* parsing worked */
 		return absyn_root;
 	else 
-		printf("oooooooooooooooooooooooooooooooooooooops! not pass syntax! no need to do type check.  \n");
+		printf("oooops! not pass syntax! no need to do type check.  \n");
 		return NULL;
 }
 
 int main(int argc, char **argv) {
+
     if (argc != 2){
 		fprintf(stderr, "usage: a.out filename\n");
 		exit(1);
 	}
 
-    printf("file::: %s",argv[1]);
+    printf("Start parsing %s ...\n",argv[1]);
+
+    // 抽象语法
 	A_exp temp = parse(argv[1]);
 
     /* 类型检查 */
 	if (temp) {
-
-        pr_exp(stdout, temp, 4);
-        printf("\n-------------------------\n");
-
+//        pr_exp(stdout, temp, 4);
+//        printf("\n-------------------------\n");
         SEM_transProg(temp);
 	}
 	return 0;
