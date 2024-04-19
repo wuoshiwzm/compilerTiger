@@ -1,8 +1,3 @@
-/**
-    Created by l30025288 on 2024/4/10.
-*/
-
-
 #ifndef CHPT07_IR_TREE_H
 #define CHPT07_IR_TREE_H
 
@@ -13,25 +8,26 @@ typedef enum{T_eq, T_ne, T_lt, T_gt, T_le, T_ge, T_ult, T_ule, T_ugt, T_uge} T_r
 typedef enum{T_plus, T_minus, T_mul, T_div, T_and, T_or, T_lshift, T_rshift, T_arshift, T_xor} T_binOp; // 二元运算
 
 /*
- * 语句
+ * 结构体定义
  */
+// ----------语句----------
 typedef struct T_stm_ *T_stm;
 struct T_stm_{
-    enum {T_SEQ, T_LABEL, T_JUMP, ..., T_EXP} kind;
+    enum {T_SEQ, T_LABEL, T_JUMP, T_CJUMP, T_MOVE, T_EXP} kind;
     union {
+        Temp_label LABEL;
         struct {T_stm left, right;} SEQ;
-        struct {S_symbol name, ... } LABEL;
-        // ...
-
+        struct {} JUMP;
+        struct {T_relOp op; T_exp left, right; Temp_label true, false} CJUMP;
+        struct {T_exp dst, src;} MOVE;
+        T_exp EXP;
     }u;
 };
 typedef struct T_stmList_ *T_stmList;
 struct T_stmList_{T_stm head; T_stmList tail;};
 T_stmList T_StmList(T_stm head, T_stmList tail;);
 
-/*
- * 表达式
- */
+// ----------表达式----------
 typedef T_exp_ *T_exp;
 struct T_exp_{
     enum {T_BINOP, T_MEM, T_TEMP, ..., T_CALL} kind; // 表达式类型
@@ -44,11 +40,24 @@ typedef struct T_expList_ *T_expList;
 struct T_expList_{T_exp head; T_expList tail;};
 T_expList T_ExpList(T_exp head, T_expList tail);
 
+// ----------patchList：真值/假值 回填表----------
+typedef struct patchList_ *patchList;
+
+// Temp_label定义： typedef S_symbol Temp_label;
+struct patchList_ {Temp_label *head; patchList tail};
+
+// 构造函数
+static patchList PatchList(Temp_label *head, patchList tail);
+
+// 将标记 label 填充到 真/假值回填表中
+void doPatch(patchList list, Temp_label label);
+
+// 连接两个回填表
+patchList joinPatch(patchList first, patchList next);
 
 /*
- * 语句 stm
+ * -------------------------语句 stm-------------------------
  */
-
 // SEQ(s1, s2) 语句 s1后跟 s2
 T_stm T_Seq(T_stm left, T_stm right);
 
@@ -65,13 +74,13 @@ T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label true, Temp_label f
 
 // MOVE(TEMP t, e): 计算e的结果，送入临时单元 t
 // MOVE(T_Mem(exp1), exp2): 计算 exp1,得到地址 a, 计算exp2 并将结果存储在从地址 a开始的 wordSize个字节的存储单元中
-T_exp T_Move(T_exp exp1, T_exp exp2);
+T_stm T_Move(T_exp exp1, T_exp exp2);
 
 // EXP(e) 计算 e 并忽略结果
 T_stm T_Exp(T_exp exp);
 
 /*
- * 表达式 exp
+ * -------------------------表达式 exp-------------------------
  */
 // BINOP(op, e1, e2) 二元操作 op，先算 left, 后算 right, 最后算 "e1 op e2"
 T_exp T_Binop(T_binOp op, T_exp left, T_exp right);
@@ -95,5 +104,15 @@ T_exp T_Const(int num);
 
 // CALL(f, l) 以参数表 l 调用函数 f
 T_exp T_Call(T_exp head, T_expList tail);
+
+
+/*
+ * -------------------------表达式 exp 转化-------------------------
+ */
+T_exp unEx(Tr_exp exp);
+
+T_stm unNx(Tr_exp exp);
+
+static struct Cx unCx(Tr_exp exp);
 
 #endif //CHPT07_IR_TREE_H
