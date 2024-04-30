@@ -1,10 +1,9 @@
 
-
 #include <assert.h>
+#include "util.h"
 #include "tree.h"
 #include "translate.h"
 #include "translate.c"
-
 
 /*
 struct Tr_exp_ {
@@ -16,7 +15,6 @@ struct Tr_exp_ {
     } u;
 };
  */
-
 // 条件结构体 struct Cx {patchList trues; patchList falses; T_stm stm};
 // T_Eseq(T_stm stm, T_exp exp) 执行 stm, 返回 exp
 // T_exp T_Temp(Temp_temp temp) 生成一个临时变量
@@ -51,8 +49,56 @@ static T_exp unEx(Tr_exp e) {
     assert(0);
 }
 
+// T_stm T_Seq(T_stm left, T_stm right);
+static T_stm unNx(Tr_exp exp){
+    switch (exp->kind) {
+        case Tr_ex:
+            return T_Exp(exp->u.ex);
+
+        case Tr_nx:
+            return exp->u.nx;
+
+        case Tr_cx:
+            Temp_temp r = Temp_newtemp();
+            T_exp er = T_Temp(r) // 返回值
+
+            // t:真值回填标号 f:假值回填标号
+            Temp_label t = Temp_newlabel(), f = Temp_newlabel();
+            // 将真/假值回填表中的标号全部换成 t, f
+            doPatch(e->u.cx.trues, t);
+            doPatch(e->u.cx.falses, f);
+
+            return T_Seq(exp->u.cx.stm, T_Seq(T_Label(t), T_Label(f)));
+    }
+}
 
 
+
+// struct Cx {patchList trues; patchList falses; T_stm stm}
+// T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label true, Temp_label false) 为真时跳转 true，否则 false
+static struct Cx unCx(Tr_exp exp){
+    struct Cx cx = (Cx)checked_malloc(sizeof (struct Cx));
+    Temp_label t = Temp_newlabel(), f = Temp_newlabel();
+
+    struct Cx cx;
+    switch (exp->kind) {
+        case Tr_ex:
+            // cx.stm = T_Exp(exp.u.ex);
+            cx.stm = T_Cjump(T_ne, exp->u.ex, T_Const(0),NULL, NULL);
+            cx.trues = PatchList(&cx.stm->u.CJUMP.true, NULL); // 要跳转到的 true 分支
+            cx.falses = PatchList(cx.stm->u.CJUMP.false, NULL); // 要跳转到的 false 分支
+            return cx;
+
+        case Tr_nx: // 不会走到这一步 ？
+            cx.stm = exp->u.nx;
+            cx.trues = NULL;
+            cx.falses = NULL;
+            return cx;
+
+        case Tr_cx:
+            return exp->u.cx;
+    }
+}
 
 
 /*
