@@ -1,3 +1,6 @@
+#ifndef _ABSYN_H_
+#define _ABSYN_H_
+
 /*
  * 抽象语法
  * absyn.c - Abstract Syntax Functions. Most functions create an instance of an
@@ -378,3 +381,5 @@ void printDec(A_dec dec){
         printf(" var: %s. \n", S_name(dec->u.var.var));
     }
 }
+
+#endif
