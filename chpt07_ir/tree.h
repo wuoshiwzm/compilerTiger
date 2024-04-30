@@ -27,13 +27,18 @@ typedef struct T_stmList_ *T_stmList;
 struct T_stmList_{T_stm head; T_stmList tail;};
 T_stmList T_StmList(T_stm head, T_stmList tail;);
 
-// ----------表达式----------
+// ----------表达式的中间表示----------
 typedef T_exp_ *T_exp;
 struct T_exp_{
-    enum {T_BINOP, T_MEM, T_TEMP, ..., T_CALL} kind; // 表达式类型
+    enum {T_BINOP, T_MEM, T_TEMP, T_ESEQ, T_NAME, T_CONST, T_CALL} kind; // 表达式类型
     union {
         struct {T_binOp op; T_exp left, right;} BINOP;
-        // ...
+        T_exp MEM;
+        Temp_temp TEMP;
+        struct {T_stm stm; T_exp exp} ESEQ;
+        Temp_label NAME;
+        int CONST;
+        struct {T_exp fun; T_expList args} CALL;
     }u;
 };
 typedef struct T_expList_ *T_expList;
@@ -76,7 +81,7 @@ T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label true, Temp_label f
 // MOVE(T_Mem(exp1), exp2): 计算 exp1,得到地址 a, 计算exp2 并将结果存储在从地址 a开始的 wordSize个字节的存储单元中
 T_stm T_Move(T_exp exp1, T_exp exp2);
 
-// EXP(e) 计算 e 并忽略结果
+// EXP(e) 计算 e 并忽略结果 T_exp -> T_stm
 T_stm T_Exp(T_exp exp);
 
 /*
