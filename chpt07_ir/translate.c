@@ -219,9 +219,11 @@ static struct Cx unCx(Tr_exp exp) {
 
 // ************* exp（AST） 的中间代码转换 *************
 
-// 1. 值的 IR 生成
+// ************* 1. 值的 IR 生成 *************
+
 // NULL 对应 0 地址
 static Tr_exp Tr_NIL = NULL;
+
 Tr_exp Tr_nilExp(){
   if (Tr_NIL == NULL){
     Tr_NIL = Tr_Ex(T_Mem(T_Const(0)));
@@ -231,6 +233,8 @@ Tr_exp Tr_nilExp(){
 
 // void 对应 0
 static Tr_exp Tr_NOOP = NULL;
+
+// void
 Tr_exp Tr_voidExp(void){
   if (Tr_NOOP == NULL){
     Tr_NOOP = Tr_Ex(T_Const(0));
@@ -238,6 +242,7 @@ Tr_exp Tr_voidExp(void){
   return Tr_NOOP;
 }
 
+// 字符串
 Tr_exp Tr_stringExp(string str){
   // 生成符号
   Temp_label  tl = Temp_newlabel();
@@ -246,12 +251,14 @@ Tr_exp Tr_stringExp(string str){
   return Tr_Ex(T_Name(tl));
 }
 
+// int值
 Tr_exp Tr_intExp(int val){
   T_exp te = T_Const(val);
   Tr_exp tre = Tr_Ex(te);
   return tre;
 }
 
+// 数组
 Tr_exp Tr_arrayExp(Tr_exp size, Tr_exp init){
   /* 数组创建的汇编代码
       T_Move   var <- 0
@@ -270,7 +277,9 @@ Tr_exp Tr_arrayExp(Tr_exp size, Tr_exp init){
 }
 
 
-// 2. record 类型的 IR 生成, cnt: record 中属性的个数
+
+// ************* 2. record 类型   cnt: record 中属性的个数 *************
+
 Tr_exp Tr_recordExp_new(int cnt){
   debug("record fields=%d", cnt);
   // 初始化 record, 相当于  malloc(cnt*F_wordSize)
@@ -283,7 +292,9 @@ Tr_exp Tr_recordExp_new(int cnt){
 }
 
 
-// 3. 运算的 IR 生成
+
+// ************* 3. 运算的 IR 生成 *************
+
 // 二元算术运算  +-*/
 Tr_exp Tr_arithExp(A_oper oper, Tr_exp left, Tr_exp right){
   T_exp exp;
@@ -369,37 +380,9 @@ Tr_exp Tr_logicExp(A_oper oper, Tr_exp left, Tr_exp right, bool isStrCompare){
   return Tr_Cx(tlist, flist, stm)
 }
 
+// ************* 4. 变量的 IR 生成  semant.c :: transVar *************
 
-// 4. 变量的 IR 生成
 // 单变量
-/*
-struct Tr_level_{
-  // 层次值
-  int depth;
-  Tr_level parent;
-  F_frame frame;
-};
-
-struct Tr_access_{
-  Tr_level level;
-  F_access access;
-};
-
-struct F_access_ {
-    enum {
-        inFrame, inReg
-    } kind; // 一个调用 是在栈帧中， 还是在 寄存器中
-    union {
-        int offset; // 栈帧中， 则看偏移量 offset
-        Temp_temp reg;  // 寄存器，则看临时寄存器变量 Temp_temp
-    } u;
-};
-
-
-
-
-
- */
 Tr_exp Tr_simpleVar(Tr_access acc, Tr_level level){
   debug("Tr_simpleVar");
 
@@ -418,16 +401,22 @@ Tr_exp Tr_simpleVar(Tr_access acc, Tr_level level){
       level = level->parent;
     }
 
-
-
-    texp = F_Exp(acc->access, &(level->frame))
+    texp = F_Exp(acc->access, &(level->frame));
   }else{
-    texp = F_Exp(acc->access, T_Temp(F_FP()))
+    texp = F_Exp(acc->access, T_Temp(F_FP()));
   }
 
+  return Tr_Ex(texp);
 }
 
-// 5. 赋值的 IR 生成
+// A_fieldVar...
+
+// A_subscriptVar...
+
+
+// ************* 5. 语句 *************
+
+// 赋值
 Tr_exp Tr_assignExp(Tr_exp lval, Tr_exp rval){
   debug("Tr_assignExp");
   if (rval != NULL ){
@@ -439,10 +428,50 @@ Tr_exp Tr_assignExp(Tr_exp lval, Tr_exp rval){
   }
 }
 
+// while
+// break
+// for
+
+
+
+
+// oper 运算。。。
+
+// if
+
+
+
+
+
+
+
+// ************* 6. 声明 *************
+
+// let
+
+// 函数 function
+
+// 变量 var
+
+// 类型 type
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 片段...
 F_fragList Tr_getResult(){
-  return F_getFra;
+  // return F_getFra;
 }
 
 
@@ -470,5 +499,3 @@ void Tr_printResult(){
 }
 
 
-
-void

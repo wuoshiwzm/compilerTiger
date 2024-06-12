@@ -8,3 +8,6 @@ lex.yy.c
 *.tab.*
 a.out
 a.exe
+.cproject
+.project
+.settings
