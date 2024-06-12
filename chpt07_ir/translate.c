@@ -293,6 +293,7 @@ Tr_exp Tr_recordExp_new(int cnt){
 
 
 
+
 // ************* 3. 运算的 IR 生成 *************
 
 // 二元算术运算  +-*/
@@ -380,6 +381,9 @@ Tr_exp Tr_logicExp(A_oper oper, Tr_exp left, Tr_exp right, bool isStrCompare){
   return Tr_Cx(tlist, flist, stm)
 }
 
+
+
+
 // ************* 4. 变量的 IR 生成  semant.c :: transVar *************
 
 // 单变量
@@ -409,9 +413,18 @@ Tr_exp Tr_simpleVar(Tr_access acc, Tr_level level){
   return Tr_Ex(texp);
 }
 
-// A_fieldVar...
+// A_fieldVar a.b
+Tr_exp Tr_fieldVar(Tr_exp base, int field_offset){
+ T_exp countMem = T_Binop(T_plus, unEx(base), T_Const(field_offset * F_wordSize));
+ T_exp mem = T_Mem(countMem);
+ return Tr_Ex(mem);
+ // return Tr_Ex(T_Mem(T_Binop(T_plus, unEx(base), T_Const(field_offset * F_wordSize))));
+}
+
 
 // A_subscriptVar...
+
+
 
 
 // ************* 5. 语句 *************
@@ -429,7 +442,11 @@ Tr_exp Tr_assignExp(Tr_exp lval, Tr_exp rval){
 }
 
 // while
+
+
 // break
+
+
 // for
 
 
