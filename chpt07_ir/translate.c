@@ -258,7 +258,7 @@ Tr_exp Tr_intExp(int val){
   return tre;
 }
 
-// 数组
+// 数组变量
 Tr_exp Tr_arrayExp(Tr_exp size, Tr_exp init){
   /* 数组创建的汇编代码
       T_Move   var <- 0
@@ -413,7 +413,7 @@ Tr_exp Tr_simpleVar(Tr_access acc, Tr_level level){
   return Tr_Ex(texp);
 }
 
-// A_fieldVar a.b
+// 域变量，A_fieldVar a.b, 通过 base 地址计算域变量的地址
 Tr_exp Tr_fieldVar(Tr_exp base, int field_offset){
  T_exp countMem = T_Binop(T_plus, unEx(base), T_Const(field_offset * F_wordSize));
  T_exp mem = T_Mem(countMem);
@@ -421,6 +421,11 @@ Tr_exp Tr_fieldVar(Tr_exp base, int field_offset){
  // return Tr_Ex(T_Mem(T_Binop(T_plus, unEx(base), T_Const(field_offset * F_wordSize))));
 }
 
+
+// 数组变量   a[10],   a[ind]
+Tr_exp Tr_arrayVar(Tr_exp base, Tr_exp offset_exp){
+	return Tr_Ex(T_Mem(T_Binop(T_plus, unEx(base), T_Binop(T_mul, unEx(offset_exp),T_Const(F_wordSize)))));
+}
 
 // A_subscriptVar...
 
