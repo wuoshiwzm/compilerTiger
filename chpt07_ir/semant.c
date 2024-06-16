@@ -1,16 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
 #include "util.h"
 #include "symbol.h"
 #include "errormsg.h"
 #include "types.h"
 #include "absyn.h"
 #include "temp.h"
+#include "tree.h"
+#include "frame.h"
 #include "myframe.h"
 #include "translate.h"
 #include "env.h"
 #include "semant.h"
-#include "printtree.h"
 
 // 调试
 #define debug(...) U_debug ( "[semant] ", __VA_ARGS__ )
@@ -595,10 +598,10 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 			// 3. 创建数组存参数
 			// 3.1 数组size
 			i = 0;
-			
-			for (formals = callinfo->u.fun.formals; formals != NULL; formals = formals->tail)
-			{
-				if (formals->head != NULL) i++;
+			for (formals = callinfo->u.fun.formals; formals != NULL; formals = formals->tail) {
+				if (formals->head != NULL) {
+					i++;
+				}
 			}
 			arg_exps = (i>0)? (Tr_exp*)checked_malloc(i * sizeof(Tr_exp)):NULL;
 
