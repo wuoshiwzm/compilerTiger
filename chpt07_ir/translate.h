@@ -134,11 +134,6 @@ Tr_exp Tr_forExp(Tr_exp var, Tr_exp low, Tr_exp high, Tr_exp body);
 Tr_exp Tr_ifExp(Tr_exp cond, Tr_exp thenb, Tr_exp elseb);
 
 
-Tr_exp Tr_letExp();
-
-
-
-
 // 更新片段表， 记住一个过程的片段 ProcFrag
 //void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals);
 void Tr_genLoopDoneLabel();
@@ -152,6 +147,33 @@ F_fragList Tr_getResult(void);
 void Tr_printTree(Tr_exp exp);
 void Tr_printTrExp(Tr_exp exp);
 void Tr_printResult();
+
+
+
+
+
+
+
+
+
+
+
+
+void Tr_genLoopDoneLabel();
+
+
+
+ 
+ 
+//Tr_exp Tr_seqExp(Tr_exp*, int);
+//Tr_exp Tr_voidExp(void);
+//Tr_exp Tr_callExp(Tr_level caller_lvl, Tr_level callee_lvl, Temp_label fun_label, Tr_exp* argv, int args);
+
+
+
+
+
+
 
 
 
