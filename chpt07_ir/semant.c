@@ -275,7 +275,7 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 	struct expty expty;
 	A_exp exp;
 
-	E_enventry callinfo; /* 函数调用: funx(a,b) */
+
 	Ty_ty recordty, arrayty;
 	A_expList list;
 	Tr_exp trexp;
@@ -310,6 +310,14 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 	// A_seqExp
 	A_expList expList;
 	Tr_exp* trexp_array;
+
+	// A_callExp
+	Ty_tyList formals;
+	A_expList args;
+	Ty_ty ty;
+	E_enventry callinfo; /* 函数调用: funx(a,b) */
+	int arg_number;
+	Tr_exp* arg_exps;
 
 	switch (e->kind) {
 		// 变量表达式
@@ -575,21 +583,31 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 
 		/* 调用表达式 */
 	case A_callExp:
-		/* 获取调用信息 在值环境 v 中查找函数 func 的参数，返回值 */
+
+		debug("A_callExp func: %s", S_name(e->u.call.func);
+
+		// 1. 获取调用信息 在值环境 v 中查找函数 func 的参数，返回值 
 		callinfo = S_look(v, e->u.call.func);
 
-		/* 表达式形式为 函数名funx(参数params)的形式，否则表示函数 funx 未定义 */
+		// 2. 表达式形式为 函数名funx(参数params)的形式，否则表示函数 funx 未定义 
 		if (callinfo && callinfo->kind == E_funEntry) {
+
+			// 3. 创建数组存参数
+			// 3.1 数组size
+			i = 0;
+			
+			for (formals = callinfo->u.fun.formals; formals != NULL; formals = formals->tail)
+			{
+				if (formals->head != NULL) i++;
+			}
+			arg_exps = (i>0)? (Tr_exp*)checked_malloc(i * sizeof(Tr_exp)):NULL;
 
 			/* 判断实参(e->u.call.args) 和 形参(callinfo->u.fun.formals)类型是否一致 */
 			if (args_match(level, v, t, e->u.call.args, callinfo->u.fun.formals, e)) {
 				/* 参数类型正确，返回值类型为 定义的或 void */
-				if (callinfo->u.fun.result) {
-					return expTy(NULL, actual_ty(callinfo->u.fun.result));
-				}
-				else {
-					return expTy(NULL, Ty_Void());
-				}
+				if (callinfo->u.fun.result) return expTy(NULL, actual_ty(callinfo->u.fun.result));
+
+				else return expTy(NULL, Ty_Void());
 			}
 			else {
 				EM_error(e->pos, "args match failed.\n");
@@ -599,7 +617,10 @@ static struct expty transExp(Tr_level level, S_table v, S_table t, A_exp e) {
 		else {
 			EM_error(e->pos, "func: %s undefined.\n", S_name(e->u.call.func));
 		}
-		return expTy(NULL, Ty_Void());
+
+		// 中间代码
+		trexp = Tr_callExp(level, Tr_getParent(callinfo->u.fun.level), callinfo->u.fun.label, args_match, i);
+		return trexp(NULL, Ty_Void());
 
 		/* break表达式 */
 	case A_breakExp:

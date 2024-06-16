@@ -680,6 +680,9 @@ Tr_exp Tr_breakExp() {
 // let
 
 // 函数 function
+Tr_exp Tr_callExp(Tr_level caller_lvl, Tr_level callee_lvl, Temp_label fun_label, Tr_exp* argv, int args) {
+
+}
 
 // 变量 var
 
