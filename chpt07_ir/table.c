@@ -1,16 +1,11 @@
 /**
    符号表
 */
-
 #include <stdio.h>
 #include "util.h"
-#include "table.h"
 #include "symbol.h"
 #include "types.h"
-#include "temp.h"
-#include "translate.h"
-#include "myframe.h"
-#include "env.h"
+#include "table.h"
 
 // 为什么符号表中 table属性 数组的长度是 127???????
 #define TABSIZE 127
@@ -201,9 +196,6 @@ void TAB_show_tenv(TAB_table t) {
                 case Ty_name:
                     s = S_name(tmp->u.name.sym);
                     break;
-                case Ty_double:
-                    s = "double";
-                    break;
                 }
 
             }
@@ -215,23 +207,3 @@ void TAB_show_tenv(TAB_table t) {
 void TAB_show_venv(TAB_table v) {
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
