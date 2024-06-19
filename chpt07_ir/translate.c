@@ -3,18 +3,9 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include "table.h"
-#include "util.h"
-#include "symbol.h"
-#include "temp.h"
-#include "tree.h"
-#include "frame.h"
-#include "absyn.h"
-#include "translate.h"
 #include "myframe.h"
-#include "printtree.h"
+#include "translate.h"
+#include "consts.h"
 
 #define debug(...) U_debug ( "[translate] ", __VA_ARGS__ )
 
@@ -90,23 +81,6 @@ static Temp_label LL_peek() {
   return GS_peek(&loop_label_list);
 }
 
-
-/*
-  Tr_level: 层级数， parent
-  Tr_access: F_access + level(F_access，层级信息)
-  F_access: 栈帧偏移量
- */
-struct Tr_level_ {
-  // 层次值
-  int depth;
-  Tr_level parent;
-  F_frame frame;
-};
-
-struct Tr_access_ {
-  Tr_level level;
-  F_access access;
-};
 
 /*
  * Level
@@ -185,9 +159,10 @@ Tr_access Tr_allocLocal(Tr_level level) {
 }
 
 
-/*
- * 中间代码 IR tree
- */
+
+/************************** 中间代码转换 **************************/
+
+/************* 0. Ex, Nx, Cx, Patchlist *************/
 
 static Tr_exp Tr_Ex(T_exp exp) {
   Tr_exp e = checked_malloc(sizeof(struct Tr_exp_));
@@ -297,8 +272,23 @@ static struct Cx unCx(Tr_exp exp) {
   }
 }
 
+void doPatch(patchList list, Temp_label label) {
+  Temp_label *l;
+  for (; list != NULL; list = list->tail) {
+    l = list->head;
+    if (l != NULL) {
+      *l = label;
+    }
+  }
+}
 
-/************************** 中间代码转换 **************************/
+static patchList PatchList(Temp_label *head, patchList tail) {
+  patchList pl = (patchList) checked_malloc(sizeof(struct patchList_));
+  pl->head = head;
+  pl->tail = tail;
+  return pl;
+}
+
 
 /************* 1. 值的 IR 生成 *************/
 
@@ -475,7 +465,6 @@ Tr_exp Tr_simpleVar(Tr_access acc, Tr_level level) {
   return Tr_Ex(texp);
 }
 
-
 // 域变量: a.b, 通过 base 地址计算域变量的地址
 Tr_exp Tr_fieldVar(Tr_exp base, int field_offset) {
   return Tr_Ex(T_Mem(T_Binop(T_plus, unEx(base), T_Const(field_offset * F_wordSize))));
@@ -625,19 +614,19 @@ Tr_exp Tr_ifExp(Tr_exp cond, Tr_exp thenexp, Tr_exp elseexp) {
 }
 
 // 表达式列表 A_seqExp
-Tr_exp Tr_seqExp(Tr_exp* exparr, int size){
+Tr_exp Tr_seqExp(Tr_exp *exparr, int size) {
   debug("Tr_seqExp");
-  T_exp _texp = (T_exp) checked_malloc(sizeof (struct T_exp_));
+  T_exp _texp = (T_exp) checked_malloc(sizeof(struct T_exp_));
   T_exp *p = &_texp, head;
 
   int i = 0;
   int last = size - 1;
-  while (i<size){
+  while (i < size) {
     Tr_printTrExp(exparr[i]);
-    if (i != last){
+    if (i != last) {
       // 执行数组前面的所有 exparr[i]
       *p = T_Eseq(unNx(exparr[i]), NULL);
-    }else{
+    } else {
       // 返回数组最后面的 Tr_exp
       *p = unEx(exparr[i]);
     }
@@ -653,12 +642,6 @@ Tr_exp Tr_seqExp(Tr_exp* exparr, int size){
   return Tr_Ex(head);
 }
 
-
-
-// oper 运算。。。
-
-
-
 // break  跳到 done lable 处
 Tr_exp Tr_breakExp() {
   Temp_label l = LL_peek();
@@ -666,53 +649,97 @@ Tr_exp Tr_breakExp() {
   T_stm stm = T_Jump(
       T_Name(l),
       Temp_LabelList(l, NULL)
-      );
+  );
   return Tr_Nx(stm);
 }
 
+// 调用函数 : fun_label
+Tr_exp Tr_callExp(Tr_level caller_lvl, Tr_level callee_lvl, Temp_label fun_label, Tr_exp *argv, int args) {
 
+  debug("caller level %d, callee level %d", callee_lvl->depth, caller_lvl->depth);
+  T_exp staticLink; // 静态链（当前），栈帧信息
+  int cnt = 0;
 
+  // 1. 静态链
+  // 1.1. 调用当前 Level 同级的函数, 直接调用
+  if (caller_lvl == callee_lvl) {
+    // F_FP(): 获取当前 帧指针
+    // 静态链，就是全局的那个栈帧 F_access F_staticLink()
+    staticLink = F_Exp(F_staticLink(), T_Temp(F_FP()));
+  } else {
+    // 2.2. 调用非当前level的函数，按静态链从当前（调用者）栈帧 F_FP() 开始，沿着level的parent 方向找
+    staticLink = F_Exp(F_staticLink(), T_Temp(F_FP()));
+    caller_lvl = caller_lvl->parent;
 
+    while (caller_lvl != callee_lvl) {
+      staticLink = F_Exp(F_staticLink(), staticLink);
+      caller_lvl = caller_lvl->parent;
+    }
+  }
 
-/************* 6. 声明  semant.c::transDec *************/
-// transDec(Tr_level level, S_table v, S_table t, A_dec d)
+  // 2. 参数列表 T_expList 中的每一个元素指向对应的 *argv
+  T_expList argListHead = NULL;
+  if (args > 0) {
+    // 2.1. 初始化
+    T_expList argList = (T_expList) checked_malloc(sizeof(struct T_expList_));
+    argListHead = argList;
 
-// let
+    // 参数列表的头就是静态连  ？？？ 为什么？？？
+    argList->head = staticLink;
+    argList->tail = NULL;
 
-// 函数 function
-Tr_exp Tr_callExp(Tr_level caller_lvl, Tr_level callee_lvl, Temp_label fun_label, Tr_exp* argv, int args) {
+    int i = 0;
+    while (i < args) {
+      argList->tail = (T_expList) checked_malloc(sizeof(struct T_expList_));
+      argList = argList->tail;
 
+      // 指向 argv 数组的当前元素
+      argList->head = unEx(*argv);
+      argList->tail = NULL;
+      // argv 移到下一个元素
+      argv++;
+      i++;
+    }
+  }
+
+  // 3. 生成 IR
+  T_exp texp = T_Call(T_Name(fun_label), argListHead);
+  return Tr_Ex(texp);
 }
 
-// 变量 var
 
-// 类型 type
-
+/************* 6. 声明  semant.c::transDec,返回 assignExp *************/
 
 
-
-
-
+/************* 7. 片段 (函数声明) *************/
 
 // 片段...
 F_fragList Tr_getResult() {
-//  return F_getFra;
+  return F_getFragList();
+}
+
+// 生成或更新 全局片段表 1. 函数片段： 栈帧(level) + 函数体(body) 2. 字符串片段
+void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals) {
+
+  // 函数声明
+  T_stm stm = T_Seq(
+      NULL,
+      T_Move(T_Name(level->frame->begin_label), unEx(body)) // T_Move(T_exp dst, T_exp src)
+  );
+  // 添加到全局片段表
+  F_procEntryExit1(level->frame, stm);
 }
 
 
-// 调试
+/************* 8. 调试 *************/
 void Tr_printLevel(Tr_level level) {
   printf(" --- Level: depth = %d; name = %s\n", level->depth, S_name(F_name(level->frame)));
 }
 
 void Tr_printAccess(Tr_access access) {
-//    printf( "--- Access:" );
+  printf("--- Access:");
   Tr_printLevel(access->level);
-//    printf( "--- Access offset: %d \n", access->access->u.offset);
-}
-
-void printLevel(Tr_level level) {
-  printf("Level: depth = %d; name = %s \\n", level->depth, S_name(F_name(level->frame)));
+  printf("--- Access offset: %d \n", access->access->u.offset);
 }
 
 void Tr_printTree(Tr_exp exp) {
@@ -720,9 +747,25 @@ void Tr_printTree(Tr_exp exp) {
   printStmList(stdout, T_StmList(unNx(exp), NULL));
 }
 
-void Tr_printTrExp(Tr_exp exp) {}
+void Tr_printTrExp(Tr_exp exp) {
+  debug(" dump tr exp <<<<<<<<<<<<<< ");
+  switch (exp->kind) {
+    case Tr_ex:
+      debug(" ex ");
+      debug(" addr %d", (int) (exp->u.ex));
+      break;
+    case Tr_cx:
+      debug(" cx ");
+      debug(" addr %d", (int) (exp->u.cx.stm));
+      break;
+    case Tr_nx:
+      debug(" nx ");
+      debug(" addr %d", (int) (exp->u.nx));
+      break;
+  }
+  debug(" dump tr exp >>>>>>>>>>>>>> ");
+}
 
-//
 void Tr_printResult() {
   F_fragList frags = Tr_getResult();
 }
