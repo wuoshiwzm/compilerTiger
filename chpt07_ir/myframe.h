@@ -1,6 +1,5 @@
 #ifndef COMPILER_TIGER_MASTER_MYFRAME_H_
 #define COMPILER_TIGER_MASTER_MYFRAME_H_
-
 #include "frame.h"
 
 struct F_frame_ {
