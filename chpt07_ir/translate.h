@@ -2,8 +2,7 @@
 #define TRANSLATE_H_
 #include "tree.h"
 #include "absyn.h"
-#include "frame.h"
-
+#include "myframe.h"
 
 /* Generic Stack Structure START */
 typedef struct stack_node_ *stack_node;
@@ -34,8 +33,8 @@ struct patchList_ { Temp_label *head; patchList tail;};
 typedef struct Tr_access_ *Tr_access;
 typedef struct Tr_accessList_ *Tr_accessList;
 struct Tr_accessList_{
-    Tr_access head;
-    Tr_accessList tail;
+  Tr_access head;
+  Tr_accessList tail;
 };
 
 struct Cx {
@@ -45,12 +44,24 @@ struct Cx {
 };
 
 struct Tr_exp_ {
-    enum {Tr_ex, Tr_nx, Tr_cx} kind;
-    union {
-        T_exp ex;
-        T_stm nx;
-        struct Cx cx;
-    } u;
+  enum {Tr_ex, Tr_nx, Tr_cx} kind;
+  union {
+    T_exp ex;
+    T_stm nx;
+    struct Cx cx;
+  } u;
+};
+
+struct Tr_level_ {
+  // 层次值
+  int depth;
+  Tr_level parent;
+  F_frame frame;
+};
+
+struct Tr_access_ {
+  Tr_level level;
+  F_access access;
 };
 
 
@@ -135,10 +146,8 @@ Tr_exp Tr_ifExp(Tr_exp cond, Tr_exp thenb, Tr_exp elseb);
 
 
 // 更新片段表， 记住一个过程的片段 ProcFrag
-//void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals);
 void Tr_genLoopDoneLabel();
-void Tr_procEntryExit1(Tr_level level, Tr_exp body, Tr_accessList formals);
-
+void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals);
 
 // 函数返回值的片段， 存在 Translate 的 片段表中
 F_fragList Tr_getResult(void);
@@ -147,34 +156,6 @@ F_fragList Tr_getResult(void);
 void Tr_printTree(Tr_exp exp);
 void Tr_printTrExp(Tr_exp exp);
 void Tr_printResult();
-
-
-
-
-
-
-
-
-
-
-
-
-void Tr_genLoopDoneLabel();
-
-
-
- 
- 
-//Tr_exp Tr_seqExp(Tr_exp*, int);
-//Tr_exp Tr_voidExp(void);
-//Tr_exp Tr_callExp(Tr_level caller_lvl, Tr_level callee_lvl, Temp_label fun_label, Tr_exp* argv, int args);
-
-
-
-
-
-
-
-
+void U_debug(char* module, char *message, ...);
 
 #endif
