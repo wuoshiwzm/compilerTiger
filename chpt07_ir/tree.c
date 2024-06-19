@@ -1,124 +1,153 @@
-
-#include <assert.h>
+#include <stdio.h>
 #include "util.h"
+#include "symbol.h"
+#include "temp.h"
 #include "tree.h"
-#include "translate.h"
-#include "translate.c"
 
-/*
-struct Tr_exp_ {
-    enum {Tr_ex, Tr_nx, Tr_cx} kind;
-    union {
-        T_exp ex;
-        T_stm nx;
-        struct Cx cx;
-    } u;
-};
- */
-// 条件结构体 struct Cx {patchList trues; patchList falses; T_stm stm};
-// T_Eseq(T_stm stm, T_exp exp) 执行 stm, 返回 exp
-// T_exp T_Temp(Temp_temp temp) 生成一个临时变量
-static T_exp unEx(Tr_exp e) {
-    switch (e->kind) {
-        case Tr_ex: // 有返回值表达式
-            return e->u.ex;
-
-        case Tr_nx:
-            // 1. 先计算无返回值表达式 e->u.nx
-            // 2. 返回值固定设为 T_Const(0))
-            return T_Eseq(e->u.nx, T_Const(0));
-
-        case Tr_cx:
-            Temp_temp r = Temp_newtemp();
-            T_exp er = T_Temp(r) // 返回值
-
-            // t:真值回填标号 f:假值回填标号
-            Temp_label t = Temp_newlabel(), f = Temp_newlabel();
-            // 将真/假值回填表中的标号全部换成 t, f
-            doPatch(e->u.cx.trues, t);
-            doPatch(e->u.cx.falses, f);
-
-            return T_Eseq(T_Move(er, T_Const(1)), // er 先默认赋值 1
-                          T_Eseq(e->u.cx.stm, // 执行条件判断语句，如果为true 就会跳转到 t, 否则跳转 f
-                                 T_Eseq(T_Label(f), // 跳转到 f
-                                        T_Eseq(T_Move(er, T_Const(0)), // er 赋值为 0
-                                                      T_Eseq(T_Label(t),  // 跳转到 t
-                                                             er // 最后返回 er (为1或0)
-                                                      )))));
-    }
-    assert(0);
+T_expList T_ExpList(T_exp head, T_expList tail)
+{T_expList p = (T_expList) checked_malloc (sizeof *p);
+ p->head=head; p->tail=tail;
+ return p;
 }
 
-// T_stm T_Seq(T_stm left, T_stm right);
-static T_stm unNx(Tr_exp exp){
-    switch (exp->kind) {
-        case Tr_ex:
-            return T_Exp(exp->u.ex);
-
-        case Tr_nx:
-            return exp->u.nx;
-
-        case Tr_cx:
-            Temp_temp r = Temp_newtemp();
-            T_exp er = T_Temp(r) // 返回值
-
-            // t:真值回填标号 f:假值回填标号
-            Temp_label t = Temp_newlabel(), f = Temp_newlabel();
-            // 将真/假值回填表中的标号全部换成 t, f
-            doPatch(e->u.cx.trues, t);
-            doPatch(e->u.cx.falses, f);
-
-            return T_Seq(exp->u.cx.stm, T_Seq(T_Label(t), T_Label(f)));
-    }
+T_stmList T_StmList(T_stm head, T_stmList tail)
+{T_stmList p = (T_stmList) checked_malloc (sizeof *p);
+ p->head=head; p->tail=tail;
+ return p;
+}
+ 
+T_stm T_Seq(T_stm left, T_stm right)
+{T_stm p = (T_stm) checked_malloc(sizeof *p);
+ p->kind=T_SEQ;
+ p->u.SEQ.left=left;
+ p->u.SEQ.right=right;
+ return p;
 }
 
-
-
-// struct Cx {patchList trues; patchList falses; T_stm stm}
-// T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, Temp_label true, Temp_label false) 为真时跳转 true，否则 false
-static struct Cx unCx(Tr_exp exp){
-    struct Cx cx = (Cx)checked_malloc(sizeof (struct Cx));
-    Temp_label t = Temp_newlabel(), f = Temp_newlabel();
-
-    struct Cx cx;
-    switch (exp->kind) {
-        case Tr_ex:
-            // cx.stm = T_Exp(exp.u.ex);
-            cx.stm = T_Cjump(T_ne, exp->u.ex, T_Const(0),NULL, NULL);
-            cx.trues = PatchList(&cx.stm->u.CJUMP.true, NULL); // 要跳转到的 true 分支
-            cx.falses = PatchList(cx.stm->u.CJUMP.false, NULL); // 要跳转到的 false 分支
-            return cx;
-
-        case Tr_nx: // 不会走到这一步 ？
-            cx.stm = exp->u.nx;
-            cx.trues = NULL;
-            cx.falses = NULL;
-            return cx;
-
-        case Tr_cx:
-            return exp->u.cx;
-    }
+T_stm T_Label(Temp_label label)
+{T_stm p = (T_stm) checked_malloc(sizeof *p);
+ p->kind=T_LABEL;
+ p->u.LABEL=label;
+ return p;
+}
+ 
+T_stm T_Jump(T_exp exp, Temp_labelList labels)
+{T_stm p = (T_stm) checked_malloc(sizeof *p);
+ p->kind=T_JUMP;
+ p->u.JUMP.exp=exp;
+ p->u.JUMP.jumps=labels;
+ return p;
 }
 
-
-/*
- * patchList 函数
- */
-// 将标记 label 填充到 真/假值回填表中, 把patchList 中每一个标号都换成 label
-void doPatch(patchList list, Temp_label label) {
-    for (; list; list = list->tail) {
-        *(list->head) = label;
-    }
+T_stm T_Cjump(T_relOp op, T_exp left, T_exp right, 
+	      Temp_label true, Temp_label false)
+{T_stm p = (T_stm) checked_malloc(sizeof *p);
+ p->kind=T_CJUMP;
+ p->u.CJUMP.op=op; p->u.CJUMP.left=left; p->u.CJUMP.right=right;
+ p->u.CJUMP.true=true;
+ p->u.CJUMP.false=false;
+ return p;
+}
+ 
+T_stm T_Move(T_exp dst, T_exp src)
+{T_stm p = (T_stm) checked_malloc(sizeof *p);
+ p->kind=T_MOVE;
+ p->u.MOVE.dst=dst;
+ p->u.MOVE.src=src;
+ return p;
+}
+ 
+T_stm T_Exp(T_exp exp)
+{T_stm p = (T_stm) checked_malloc(sizeof *p);
+ p->kind=T_EXP;
+ p->u.EXP=exp;
+ return p;
+}
+ 
+T_exp T_Binop(T_binOp op, T_exp left, T_exp right)
+{T_exp p = (T_exp) checked_malloc(sizeof *p);
+ p->kind=T_BINOP;
+ p->u.BINOP.op=op;
+ p->u.BINOP.left=left;
+ p->u.BINOP.right=right;
+ return p;
+}
+ 
+T_exp T_Mem(T_exp exp)
+{T_exp p = (T_exp) checked_malloc(sizeof *p);
+ p->kind=T_MEM;
+ p->u.MEM=exp;
+ return p;
+}
+ 
+T_exp T_Temp(Temp_temp temp)
+{T_exp p = (T_exp) checked_malloc(sizeof *p);
+ p->kind=T_TEMP;
+ p->u.TEMP=temp;
+ return p;
+}
+ 
+T_exp T_Eseq(T_stm stm, T_exp exp)
+{T_exp p = (T_exp) checked_malloc(sizeof *p);
+ p->kind=T_ESEQ;
+ p->u.ESEQ.stm=stm;
+ p->u.ESEQ.exp=exp;
+ return p;
+}
+ 
+T_exp T_Name(Temp_label name)
+{T_exp p = (T_exp) checked_malloc(sizeof *p);
+ p->kind=T_NAME;
+ p->u.NAME=name;
+ return p;
+}
+ 
+T_exp T_Const(int consti)
+{T_exp p = (T_exp) checked_malloc(sizeof *p);
+ p->kind=T_CONST;
+ p->u.CONST=consti;
+ return p;
+}
+ 
+T_exp T_Call(T_exp fun, T_expList args)
+{T_exp p = (T_exp) checked_malloc(sizeof *p);
+ p->kind=T_CALL;
+ p->u.CALL.fun=fun;
+ p->u.CALL.args=args;
+ return p;
 }
 
-// 连接两个 patchList
-patchList joinPatch(patchList first, patchList second) {
-    if (!first) return second;
-    for (; first->tail; first = first->tail); // 找到 first 的尾端
-    first->tail = second;
-    return first;
+T_relOp T_notRel(T_relOp r)
+{
+ switch(r)
+   {case T_eq: return T_ne;
+    case T_ne: return T_eq;
+    case T_lt: return T_ge;
+    case T_ge: return T_lt;
+    case T_gt: return T_le;
+    case T_le: return T_gt;
+    case T_ult: return T_uge;
+    case T_uge: return T_ult;
+    case T_ule: return T_ugt ;
+    case T_ugt: return T_ule;
+  }
+ assert(0); return 0;
 }
 
-
+T_relOp T_commute(T_relOp r)
+{switch(r) {
+    case T_eq: return T_eq;
+    case T_ne: return T_ne;
+    case T_lt: return T_gt;
+    case T_ge: return T_le;
+    case T_gt: return T_lt ;
+    case T_le: return T_ge;
+    case T_ult: return T_ugt;
+    case T_uge: return T_ule;
+    case T_ule: return T_uge ;
+    case T_ugt: return T_ult;
+   }
+ assert(0); return 0;
+}
 
 
