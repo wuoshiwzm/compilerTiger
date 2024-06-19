@@ -1,21 +1,19 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 // 抽象语法
-#include "table.h"
 #include "util.h"
 #include "symbol.h"
-#include "types.h"
-
-// tree
-#include "tree.h"
 
 // 栈帧
 #include "temp.h"
+
+// tree
+#include "tree.h"
+#include "printtree.h"
+
 #include "frame.h"
 #include "myframe.h"
-#include "translate.h"
+
+int F_wordSize = 4;
 
 // 帧指针 FP
 
@@ -71,6 +69,7 @@ static  Temp_temp  getNextReg(F_frame frame){
  */
 static F_access static_link = NULL;
 
+// 静态链，初始化时就是全局的栈帧（最新的）
 F_access F_staticLink(){
     // 静态链默认在栈帧中
     if (static_link == NULL){
@@ -140,15 +139,8 @@ F_access F_allocLocal(F_frame f){
     return acc;
 }
 
-T_stm F_procEntryExit1(F_frame frame, T_stm stm){
-  return stm;
-}
 
-
-
-/**
- * 中间代码
- */
+/************* 中间代码， 片段 frag *************/
 
 // 调用外部函数,如 printf, checked_malloc 等
 T_exp F_externalCall(string funName, T_expList args){
@@ -157,7 +149,7 @@ T_exp F_externalCall(string funName, T_expList args){
 
 // 生成 access 的*访问地址*
 T_exp F_Exp(F_access acc, T_exp framePtr){
-  // 判断目标 access 在栈帧中 / 寄存器中
+  // 判断目标 access 在栈帧中 / 寄存器中, 栈帧中则在存储中找对应地址，寄存器没有地址，直接找
   if (acc->kind == inFrame){
     // 地址 = 栈帧地址 + offset(位移)
     return T_Mem(T_Binop(T_plus, framePtr, T_Const(acc->u.offset)));
@@ -173,7 +165,7 @@ static F_fragList fragList_head = NULL;
 
 // 字符串片段
 F_frag F_StringFrag(Temp_label label, string str){
-  F_frag ff = = (F_frag) checked_malloc(sizeof (struct *ff));
+  F_frag ff = (F_frag) checked_malloc(sizeof (struct F_frag_));
   ff->kind = F_stringFrag;
   ff->u.stringg.label = label;
   ff->u.stringg.str = str;
@@ -182,9 +174,9 @@ F_frag F_StringFrag(Temp_label label, string str){
 
 // 流程片段
 F_frag F_ProcFrag(T_stm body, F_frame frame){
-  F_frag ff = = (F_frag) checked_malloc(sizeof (struct *ff));
+  F_frag ff = (F_frag) checked_malloc(sizeof (struct F_frag_));
   ff->kind = F_procFrag;
-  ff->u.proc.body = stm;
+  ff->u.proc.body = body;
   ff->u.proc.frame = frame;
   return ff;
 }
@@ -225,6 +217,26 @@ void F_String(Temp_label label, string str){
   *currentFrag = F_StringFrag(label, str);
 }
 
+// 返回全局片段链表
+F_fragList F_getFragList(){
+  return fragList_head;
+}
+
+// 将对应栈帧添加进全局片段表
+T_stm F_procEntryExit1(F_frame frame, T_stm stm){
+  // 先不做更新， 后面补上 todo ...
+  return stm;
+}
+
+void F_printFrag(F_frag frag){
+  if(frag->kind == F_stringFrag){
+    printf("String: label = %s; content = \"%s\"\n", S_name(frag->u.stringg.label), frag->u.stringg.str);
+  } else {
+    printf("Proc: locals = %d\n", frag->u.proc.frame->locals);
+    printf("      offset = %d\n", frag->u.proc.frame->offset);
+    printStmList(stdout, T_StmList(frag->u.proc.body, NULL));
+  }
+}
 
 
 
@@ -243,35 +255,3 @@ void F_String(Temp_label label, string str){
 
 
 
-
-
-
-
-
-
-
-
-// ******************************************************************************* //
-
-
-/*  什么时候创建栈帧？
-
-    frame.h: 存储器变量
-    temp.h:  寄存器变量 ???
-*/
-
-
-/*  什么变量会进栈帧？
-    寄存器： 不进栈帧
-    存储： 进栈帧
-    函数的参数， 返回地址，结果  很多局部变量 都由寄存器处理，
-    只有一些特殊情况会将变量的值写入存储，也就是栈帧中
-
-    1.  传址变量：变量为一地址  ( &p )
-    2.  该变量被嵌套在当前过程（函数）内的过程（其他函数）访问
-    3.  变量值太大，不能放在单个寄存器中 （ 32位，4字节 或 64位, 8字节 ）
-    4.  变量是一个数组，元素需要地址运算（C语言）
-    5.  需要使用存放该变量的寄存器
-    6.  太多局部变量 临时变量， 无法全部放入寄存器中
-    7.  函数参数大于k个 （k一般为 4 到 5个）
-*/
