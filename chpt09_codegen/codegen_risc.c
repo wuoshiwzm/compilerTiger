@@ -69,7 +69,6 @@ Temp_tempList singleTemp(Temp_temp t) {
 // 遗留下的每个子树，再应用重复相同的算法
 // 树结构： enum {T_SEQ, T_LABEL, T_JUMP, T_CJUMP, T_MOVE, T_EXP} kind;
 static void munchStm(T_stm s) {
-
   switch (s->kind) {
 
     case T_SEQ:
@@ -78,7 +77,7 @@ static void munchStm(T_stm s) {
       break;
 
     case T_LABEL:
-      // typedef S_symbol Temp_label;
+      // 汇编标注， typedef S_symbol Temp_label;
       sprintf(buf, "%s:\n", S_name(s->u.LABEL));
       AS_instr label_instr = AS_Label(String(buf), s->u.LABEL);
       emit(label_instr);
@@ -100,20 +99,23 @@ static void munchStm(T_stm s) {
       AS_instr move_instr = AS_Move(String(buf), singleTemp(tem_dst), singleTemp(tem_src));
       emit(move_instr);
       break;
-      /*
+
       if (dst->kind == T_MEM) {
 
-        if (
-            dst->u.MEM->kind == T_BINOP &&
+        if (dst->u.MEM->kind == T_BINOP &&
             dst->u.MEM->u.BINOP.op == T_plus &&
             dst->u.MEM->u.BINOP.right->kind == T_CONST) {
           munchExp(dst->u.MEM->u.BINOP.left);
           munchExp(src);
+
+
+          sprintf(buf, "MOVE `d0, `d1\n");
+          AS_instr move_instr = AS_Move(String(buf), Temp_tempList dst, Temp_tempList src);
+//          AS_instr AS_Move(string a, Temp_tempList d, Temp_tempList s);
           emit("STORE")
-        } else if (
-            dst->u.MEM->kind == T_BINOP &&
-            dst->u.MEM->u.BINOP.op == T_plus &&
-            dst->u.MEM->u.BINOP.left->kind == T_CONST) {
+        } else if (dst->u.MEM->kind == T_BINOP &&
+                   dst->u.MEM->u.BINOP.op == T_plus &&
+                   dst->u.MEM->u.BINOP.left->kind == T_CONST) {
           munchExp(dst->u.MEM->u.BINOP.right);
           munchExp(src);
           emit("STORE")
@@ -136,7 +138,7 @@ static void munchStm(T_stm s) {
       } else {
         // 不会到这里 MOVE 的 dst 只可能是 MEM 或 TEMP
         assert(0);
-      }*/
+      }
 
     case T_JUMP:
       // 跳转语句的副作用
@@ -274,18 +276,184 @@ static void munchStm(T_stm s) {
           emit(false_cjump);
           break;
 
-
         default:
           assert(0); // impossible to get to here.
       }
   }
-
 }
 
+
+// 表达式转换
+// 返回表达式的值，存在 Temp_temp
 static Temp_temp munchExp(T_exp exp) {
 
   switch (exp->kind) {
+
     case T_BINOP:
+      T_exp lexp = exp->u.BINOP.left;
+      T_exp rexp = exp->u.BINOP.right;
+      T_binOp oper = exp->u.BINOP.op;
+
+      Temp_temp ltem = munchExp(lexp);
+      Temp_temp rtem = munchExp(rexp);
+
+      Temp_temp t = Temp_newtemp();
+      Temp_temp r1 = Temp_newtemp();
+      Temp_temp r2 = Temp_newtemp();
+      Temp_temp r3 = Temp_newtemp();
+
+      bool with_const = exp->u.BINOP.left->kind == T_CONST || exp->u.BINOP.right->kind == T_CONST;
+
+      if (with_const) {
+        // 左右操作数都是常量
+        if (lexp->kind == T_CONST && lexp->kind == T_CONST) {
+          printf("the left and right exp is all CONST !!!\n")
+        } else {
+          // 左右操作数只有 1 个是常量779123
+          T_exp const_exp = lexp->u.BINOP.left->kind == T_CONST ? lexp : rexp;
+          T_exp exp_exp = lexp->u.BINOP.left->kind == T_CONST ? rexp : lexp;
+          switch (exp->u.BINOP.op) {
+            AS_targets targets = AS_Targets(singleTemp(t));
+            case T_plus:
+              // s0 + s1 => d0
+              sprintf(buf, "ADD `d0, `s0, %d\n", const_exp->u.CONST);
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              emit(binop);
+
+            case T_minus:
+              // s0 - s1 => d0
+              sprintf(buf, "SUB `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+            case T_mul:
+              sprintf(buf, "MUL `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+            case T_div:
+              sprintf(buf, "DIV  `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+            case T_and:
+              sprintf(buf, "AND `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+            case T_or:
+              sprintf(buf, "OR `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+              // 逻辑左移
+            case T_shift:
+              sprintf(buf, "SLL `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+              // 逻辑右移
+            case T_rshift:
+              sprintf(buf, "SRL `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+              // 算术右移
+            case T_arshift:
+              sprintf(buf, "SRA `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+
+            case T_xor:
+              sprintf(buf, "XOR `d0, `s0, %d\n", const_exp->u.CONST)
+              AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(exp_exp)), NULL, targets));
+              break;
+          }
+        }
+      } else {
+        switch (exp->u.BINOP.op) {
+          AS_targets targets = AS_Targets(singleTemp(t));
+          case T_plus:
+            // s0 + s1 => d0
+            sprintf(buf, "ADD `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            emit(binop);
+
+          case T_minus:
+            // s0 - s1 => d0
+            sprintf(buf, "SUB `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+          case T_mul:
+            sprintf(buf, "MUL `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+          case T_div:
+            sprintf(buf, "DIV  `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+          case T_and:
+            sprintf(buf, "AND `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+          case T_or:
+            sprintf(buf, "OR `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+            // 逻辑左移
+          case T_shift:
+            sprintf(buf, "SLL `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+            // 逻辑右移
+          case T_rshift:
+            sprintf(buf, "SRL `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+            // 算术右移
+          case T_arshift:
+            sprintf(buf, "SRA `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+
+          case T_xor:
+            sprintf(buf, "XOR `d0, `s0, `s1\n");
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            break;
+        }
+      }
+
+      return t;
+
+    case T_MEM:
+      // 内存访问
+      T_exp mem_exp = exp->u.MEM;
+      Temp_temp mem_tem = munchExp(mem_exp);
+      Temp_temp t = Temp_newtemp();
+      sprintf(buf, "add(mem) `d0 #0\n");
+      AS_instr mem_instr = AS_Oper(String(buf), singleTemp(t), singleTemp(mem_tem), NULL);
+      emit(mem_instr);
+      return t;
+//
+//    case T_TEMP:
+//      // 临时变量
+//      Temp_temp t = exp->u.TEMP;
+//      return t;
+//
+//    case T_CONST:
+//      // 常量
+//      Temp_temp t = Temp_newtemp();
+//      sprintf(buf, "add(const) `d0 #0\n");
+//      AS_instr const_instr = AS_Oper(String(buf), singleTemp(t), NULL, NULL);
+//      emit(const_instr);
+//
       break;
     case T_MEM:
       break;
@@ -300,9 +468,8 @@ static Temp_temp munchExp(T_exp exp) {
     case T_CONST:
       break;
     default:
-      assert(0); // will not get to here.
+      assert(0); // will never get to here.
   }
-
 
 
 }
