@@ -31,8 +31,10 @@
 //}
 
 
-
+// 汇编字符串
 char buf[100];
+
+static Temp_label fname = NULL; // initialized in codegen and accessed in munchStm and munchExp
 
 // struct Temp_temp_ {int num;};
 static Temp_temp munchExp(T_exp e);
@@ -92,63 +94,152 @@ static void munchStm(T_stm s) {
       T_exp dst = s->u.MOVE.dst;
       Temp_temp tem_src = munchExp(src);
       Temp_temp tem_dst = munchExp(dst);
-      // RISC 需要用到的 临时变量
-      Temp_temp tem_new = Temp_newtemp();
-      sprintf(buf, "add(move) `s0 `d0 #0\n");
-      // AS_instr AS_Move(string a, Temp_tempList d, Temp_tempList s);
-      AS_instr move_instr = AS_Move(String(buf), singleTemp(tem_dst), singleTemp(tem_src));
-      emit(move_instr);
-      break;
 
-      if (dst->kind == T_MEM) {
-
-        if (dst->u.MEM->kind == T_BINOP &&
-            dst->u.MEM->u.BINOP.op == T_plus &&
-            dst->u.MEM->u.BINOP.right->kind == T_CONST) {
-          munchExp(dst->u.MEM->u.BINOP.left);
-          munchExp(src);
-
-
-          sprintf(buf, "MOVE `d0, `d1\n");
-          AS_instr move_instr = AS_Move(String(buf), Temp_tempList dst, Temp_tempList src);
-//          AS_instr AS_Move(string a, Temp_tempList d, Temp_tempList s);
-          emit("STORE")
-        } else if (dst->u.MEM->kind == T_BINOP &&
-                   dst->u.MEM->u.BINOP.op == T_plus &&
-                   dst->u.MEM->u.BINOP.left->kind == T_CONST) {
-          munchExp(dst->u.MEM->u.BINOP.right);
-          munchExp(src);
-          emit("STORE")
-        } else if (src->kind == T_MEM) {
-          munchExp(dst->u.MEM);
-          munchExp(src->u.MEM);
-          emit("MOVEM");
-        } else {
-          munchExp(src);
-          munchExp(dst->u.MEM);
-          emit("STORE");
+      //  目标地址为 TEMP （寄存器）
+      if (dst->kind == T_TEMP) {
+        //　向 TEMP MOVE 数据
+        // TEMP_dst <- CONST, 将 CONST 加在 0 (F_ZERO) 上
+        if (src->kind == T_CONST) {
+          sprintf(buf, "(MIPS)ADD `d0, `s0, %d", src->u.CONST);
+          AS_instr instr = AS_Oper(String(buf),
+                                   Temp_TempList(dst->u.TEMP, NULL),
+                                   Temp_TempList(F_ZERO(), NULL),
+                                   NULL);
+          emit(instr);
         }
-        munchExp(src);
-      } else if (dst->kind == T_TEMP) {
-        // 某些情况下，赋值操作可以被视为一个加法操作。具体来说，如果目标是一个临时变量，那么赋值操作可以被视为一个加法操作，
-        // 因为在这种情况下，源的值可以被加到目标的地址上，这样就可以将源的值复制到目标的位置。
-        // MOVE(TEMP^i, src)
-        munchExp(src);
-        emit("ADD");
+        // TEMP_dst <- CONST + TEMP(right)
+        else if (src->kind == T_BINOP && src->u.BINOP.op == T_plus && src->u.BINOP.left->kind == T_CONST) {
+          T_exp left_exp = src->u.BINOP.left;
+          T_exp right_exp = src->u.BINOP.right;
+          sprintf(buf, "(MIPS)ADD `d0, `s0, %d", left_exp->u.CONST);
+          AS_instr instr = AS_Oper(String(buf),
+                                   Temp_TempList(dst->u.TEMP, NULL),
+                                   Temp_TempList(munchExp(right_exp), NULL),
+                                   NULL);
+        }
+        // TEMP_dst <- TEMP(left) + CONST
+        else if (src->kind == T_BINOP && src->u.BINOP.op == T_plus && src->u.BINOP.right->kind == T_CONST) {
+          T_exp left_exp = src->u.BINOP.left;
+          T_exp right_exp = src->u.BINOP.right;
+          sprintf(buf, "(MIPS)ADD `d0, `s0, %d", right_exp->u.CONST);
+          AS_instr instr = AS_Oper(String(buf),
+                                   Temp_TempList(dst->u.TEMP, NULL),
+                                   Temp_TempList(munchExp(left_exp), NULL),
+                                   NULL);
+          emit(instr);
+        }
+        // TEMP_dst <- TEMP(left) - CONST
+        else if(src->kind == T_BINOP && src->u.BINOP.op == T_minus && src->u.BINOP.right->kind == T_CONST){
+          T_exp left_exp = src->u.BINOP.left;
+          T_exp right_exp = src->u.BINOP.right;
+          sprintf(buf, "(MIPS)ADD `d0, `s0, -%d", right_exp->u.CONST);
+          AS_instr instr = AS_Oper(String(buf),
+                                   Temp_TempList(dst->u.TEMP, NULL),
+                                   Temp_TempList(munchExp(left_exp), NULL),
+                                   NULL);
+        }
+
+        // lw $dst, offset($src) 源地址为 MEM 内存  MIPS 指令
+        else if (src->kind == T_MEM) {
+          T_exp src_addr = src->u.MEM;
+          if (src->kind == T_BINOP && src->u.BINOP.op == T_plus && src->u.BINOP.right->kind == T_CONST) {
+            T_exp left_exp = src->u.BINOP.left;
+            T_exp right_exp = src->u.BINOP.right;
+            // TEMP_dst <- MEM[SP + FRAME_SIZE + CONST]  栈帧偏移, Temp_labelstring(fname)
+            if (left_exp->kind == T_TEMP && left_exp->u.TEMP = F_FP()){
+              sprintf(buf, "(MIPS)lw `d0, %d+%s_framesize(`s0)", right_exp->u.CONST, Temp_labelstring(fname));
+              AS_instr instr = AS_Oper(String(buf), Temp_TempList(dst->u.TEMP, NULL), Temp_TempList(F_SP(), NULL), NULL);
+              emit(instr);
+            }
+            // TEMP_dst <- MEM[TEMP + CONST]
+            else{
+              sprintf(buf, "(MIPS)lw `d0, %d(`s0)", right_exp->u.CONST);
+              AS_instr instr = AS_Oper(String(buf), Temp_TempList(dst->u.TEMP, NULL), Temp_TempList(munchExp(left), NULL), NULL);
+              emit(instr);
+            }
+          }
+          // TEMP_dst <- MEM[TEMP]
+          else {
+            sprintf(buf, "(MIPS)lw `d0, 0(`s0)", right_exp->u.CONST);
+            AS_instr instr = AS_Oper(String(buf), Temp_TempList(dst->u.TEMP, NULL), Temp_TempList(munchExp(src_addr), NULL), NULL);
+            emit(instr);
+          }
+        }
+        // TEMP <- TEMP
+        else {
+          sprintf(buf, "(MIPS)add `d0, `s0, `s1");
+          AS_instr instr = AS_Oper(String(buf),Temp_TempList(dst->u.TEMP, NULL),
+                                   Temp_TempList(F_ZERO(), Temp_TempList(munchExp(src), NULL),
+                                   NULL );
+        }
+      }
+      // 目标地址为 MEM 内存, 只修改 MEM值， 不返回
+      else if(dst->kind == T_MEM){
+        // 目标内存地址
+        T_exp addr = dst->u.MEM;
+
+        if (dst_addr->kind == T_BINOP && addr->u.BINOP.op == T_plus && addr->u.BINOP.right->kind == T_CONST) {
+          T_exp left = addr->u.BINOP.left;
+          T_exp right = addr->u.BINOP.right;
+
+          // MEM[SP + FRAME_SIZE + CONST] <- TEMP
+          if (left->kind ==T_TEMP && left->u.TEMP == F_FP()){
+            sprintf(buf, "(MIPS)sw `s0, `%d+%s_framesize(`d0) or s1???", right_exp->u.CONST, Temp_labelstring(fname));
+            AS_instr instr = AS_Oper(String(buf),
+                                     NULL,
+                                     Temp_TempList(munchExp(src), Temp_TempList(F_SP(), NULL)),
+                                     NULL);
+            emit(instr);
+          }
+          // MEM[TEMP + CONST] <- TEMP
+          else {
+            sprintf(buf, "(MIPS)sw `s0, `%d(`d0)", right_exp->u.CONST);
+            AS_instr instr = AS_Oper(String(buf),
+                                     NULL,
+                                     Temp_TempList(munchExp(src), Temp_TempList(munchExp(), NULL)),
+                                     NULL);
+            emit(instr);
+          }
+        }
+        // MEM[TEMP] <- TEMP
+        else{
+            sprintf(buf, "sw `s0, 0(`d0)");
+            AS_instr instr = AS_Oper(String(buf),
+                                     NULL,
+                                     Temp_TempList(munchExp(src), Temp_TempList(munchExp(addr), NULL)),
+                                     NULL );
+
+        }
       } else {
         // 不会到这里 MOVE 的 dst 只可能是 MEM 或 TEMP
         assert(0);
       }
 
     case T_JUMP:
-      // 跳转语句的副作用
-      Temp_temp t = munchExp(s->u.JUMP.exp);
-      sprintf(buf, "JMP `d0\n");
+      T_exp dst = s->u.JUMP.exp;
 
-      // 生成跳转目标 AS_targets
-      AS_targets targets = AS_Targets(s->u.JUMP.jumps);
-      AS_instr jump_instr = AS_Oper(String(buf), singleTemp(t), NULL, targets);
-      emit(jump_instr);
+      // dst: Temp_label
+      // j 命令用于无条件跳转到指定地址
+      if (dst->kind == T_NAME) {
+        Temp_label lab = dst->u.NAME;
+        // 跳转语句的副作用
+        Temp_temp t = munchExp(dst);
+        sprintf(buf, "j `j0");
+        AS_instr instr = AS_Oper(String(buf),
+                                 NULL,
+                                 NULL,
+                                 AS_Targets(Temp_LabelList(lab, NULL)));
+        emit(instr);
+      }
+      // jr 命令用于无条件跳转到寄存器中存储的地址
+      else {
+        sprintf(buf, "jr `j0");
+        AS_instr instr = AS_Oper(String(buf),
+                                 NULL,
+                                 Temp_TempList(munchExp(dst), NULL),
+                                 NULL);
+        emit(instr);
+      }
       break;
 
     case T_CJUMP:
@@ -279,6 +370,10 @@ static void munchStm(T_stm s) {
         default:
           assert(0); // impossible to get to here.
       }
+      break;
+    default:
+      assert(0)
+
   }
 }
 
@@ -289,7 +384,7 @@ static Temp_temp munchExp(T_exp exp) {
 
   switch (exp->kind) {
 
-    case T_BINOP:
+    case T_BINOP: {
       T_exp lexp = exp->u.BINOP.left;
       T_exp rexp = exp->u.BINOP.right;
       T_binOp oper = exp->u.BINOP.op;
@@ -376,97 +471,203 @@ static Temp_temp munchExp(T_exp exp) {
           case T_plus:
             // s0 + s1 => d0
             sprintf(buf, "ADD `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             emit(binop);
 
           case T_minus:
             // s0 - s1 => d0
             sprintf(buf, "SUB `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
           case T_mul:
             sprintf(buf, "MUL `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
           case T_div:
             sprintf(buf, "DIV  `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
           case T_and:
             sprintf(buf, "AND `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
           case T_or:
             sprintf(buf, "OR `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
             // 逻辑左移
           case T_shift:
             sprintf(buf, "SLL `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
             // 逻辑右移
           case T_rshift:
             sprintf(buf, "SRL `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
             // 算术右移
           case T_arshift:
             sprintf(buf, "SRA `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
 
           case T_xor:
             sprintf(buf, "XOR `d0, `s0, `s1\n");
-            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)), targets));
+            AS_instr binop = AS_Oper(String(buf), singleTemp(munchExp(lexp)), singleTemp(munchExp(rexp)),
+            targets));
             break;
         }
       }
 
       return t;
+    }
 
-    case T_MEM:
-      // 内存访问
-      T_exp mem_exp = exp->u.MEM;
-      Temp_temp mem_tem = munchExp(mem_exp);
-      Temp_temp t = Temp_newtemp();
-      sprintf(buf, "add(mem) `d0 #0\n");
-      AS_instr mem_instr = AS_Oper(String(buf), singleTemp(t), singleTemp(mem_tem), NULL);
-      emit(mem_instr);
-      return t;
-//
-//    case T_TEMP:
-//      // 临时变量
-//      Temp_temp t = exp->u.TEMP;
-//      return t;
-//
-//    case T_CONST:
-//      // 常量
-//      Temp_temp t = Temp_newtemp();
-//      sprintf(buf, "add(const) `d0 #0\n");
-//      AS_instr const_instr = AS_Oper(String(buf), singleTemp(t), NULL, NULL);
-//      emit(const_instr);
-//
-      break;
-    case T_MEM:
-      break;
+    // exp 为临时变量，寄存器，直接返回
     case T_TEMP:
+      return exp->u.TEMP;
+
+    // 内存加载
+    case T_MEM: {
+      T_exp mem_exp = exp->u.MEM;
+
+      // 计算获取地址： MEM(exp1 + CONST(i)),  MEM(CONST(i) + exp1)
+      if (mem_exp->kind == T_BINOP) {
+        T_exp lexp = mem_exp->u.BINOP.left;
+        T_exp rexp = mem_exp->u.BINOP.right;
+        if (mem_exp->u.BINOP.op == T_plus) {
+          // MEM(CONST(i) + exp1)
+          if (lexp->kind == T_CONST) {
+            Temp_temp new_temp = Temp_newtemp();
+            sprintf(buf, "lw `d0, %d(`s0)", lexp->u.CONST);
+            AS_instr instr = AS_Oper(String(buf),
+                                     Temp_TempList(new_temp, NULL),
+                                     Temp_TempList(munchExp(rexp), NULL),
+                                     NULL
+            );
+            emit(instr);
+            return new_temp;
+          }
+            // MEM(exp1 + CONST(i))
+          else if (rexp->kind == T_CONST) {
+            Temp_temp new_temp = Temp_newtemp();
+            sprintf(buf, "lw `d0, %d(`s0)", rexp->u.CONST);
+            AS_instr instr = AS_Oper(String(buf),
+                                     Temp_TempList(new_temp, NULL),
+                                     Temp_TempList(munchExp(lexp), NULL),
+                                     NULL
+            );
+            emit(instr);
+            return new_temp;
+          }
+        }
+      }
+
+        // 常量获取地址： MEM[CONST i] ld $t,C($zero)
+      else if (mem_exp->kind == T_CONST) {
+        sprintf(buf, "lw `d0, %d(`s0)", mem_exp->u.CONST);
+        Temp_temp new_temp = Temp_newtemp();
+        AS_instr instr = AS_Oper(String(buf),
+                                 Temp_TempList(new_temp, NULL), // d0
+                                 Temp_TempList(F_ZERO(), NULL), // s0
+                                 NULL
+        );
+        return new_temp;
+      }
+
+        // 计算地址 s0 并将它存入寄存器 MEM(T_Exp)	 ld $t,0($s)
+      else {
+        Temp_temp new_temp = Temp_newtemp();
+        sprintf(buf, "ld `d0, 0(`s0)");
+        AS_instr instr = AS_Oper(String(buf),
+                                 Temp_TempList(new_temp, NULL), // d0
+                                 Temp_TempList(munchExp(exp), NULL), // s0
+                                 NULL);
+        emit(instr);
+        return new_temp;
+      }
+    }
+
+    // 常量 直接把值传给 exp
+    case T_CONST: {
+      Temp_temp new_temp = Temp_newtemp();
+      sprintf(buf, "li `d0, %d \n", exp->u.CONST);
+      AS_instr const_instr = AS_Oper(String(buf),
+                                     Temp_TempList(new_temp, NULL),
+                                     NULL,
+                                     NULL);
+      emit(const_instr);
+      return new_temp;
+    }
+
+
+    case T_NAME: {
+      Temp_temp new_temp = Temp_newtemp();
+      AS_instr instr = AS_Label(buf, Temp_LabelList(exp->u.NAME, NULL));
+      emit(instr);
+      return new_temp;
       break;
-    case T_ESEQ:
+    }
+
+    // 给地址赋值为常量， 并返回这个地址
+    case T_CONST: {
+      Temp_temp new_temp = Temp_newtemp();
+      sprintf(buf, "li d0`, %d", exp->u.CONST);
+      AS_instr instr = AS_Oper(String(buf),
+                               Temp_TempList(new_temp, NULL), // d0
+                               NULL,
+                               NULL );
+      emit(instr);
+      return new_temp;
+    }
+
+    // 一个调用
+    case T_CALL: {
+      int total = 0;
+      // struct {T_exp fun; T_expList args;} CALL;
+      Temp_tempList arglist = munchArgs(exp->u.CALL.args);
+      T_exp expfun = exp->u.CALL.fun;
+
+      // 要调用的函数名 是一个 LABEL
+      if (expfun->kind == T_NAME){
+
+        // 1. 保存寄存器
+
+        // 2. 传递参数
+
+        // 2.1 前4个进寄存器，后面的进内存 栈帧，这里暂时先全部进栈帧
+
+
+        // 3. 调用函数
+
+
+
+      }
+
+
+
+
       break;
-    case T_NAME:
-      break;
-    case T_CONST:
-      break;
-    case T_CONST:
-      break;
+    }
+
+    // 基本块中 去掉了 ESEQ
+
+
     default:
       assert(0); // will never get to here.
   }
