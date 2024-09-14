@@ -93,6 +93,7 @@ static void munchStm(T_stm s) {
       // 汇编标注， typedef S_symbol Temp_label;
       sprintf(buf, "%s:\n", S_name(s->u.LABEL));
       AS_instr label_instr = AS_Label(String(buf), s->u.LABEL);
+      // AS_instr AS_Label(string a, Temp_label label)
       emit(label_instr);
       break;
 
@@ -109,7 +110,6 @@ static void munchStm(T_stm s) {
       if (dst->kind == T_TEMP) {
         //　向 TEMP MOVE 数据
         // TEMP_dst <- CONST, 将 CONST 加在 0 (F_ZERO) 上
-
         if (src->kind == T_CONST) {
           sprintf(buf, "(MIPS)ADD `d0, `s0, %d", src->u.CONST);
           AS_instr instr = AS_Oper(String(buf),
@@ -151,6 +151,9 @@ static void munchStm(T_stm s) {
         }
           // lw $dst, offset($src) 源地址为 MEM 内存  MIPS 指令
         else if (src->kind == T_MEM) {
+
+
+          printf(">>>>>>>>>>>>>>>> herer");
           T_exp src_addr = src->u.MEM;
           T_exp left_exp = src->u.BINOP.left;
           T_exp right_exp = src->u.BINOP.right;
@@ -191,7 +194,6 @@ static void munchStm(T_stm s) {
                                    Temp_TempList(F_ZERO(), Temp_TempList(munchExp(src), NULL)),
                                    NULL);
           emit(instr);
-          printf("done...  \n");
         }
       }
         // 目标地址为 MEM 内存, 只修改 MEM值， 不返回
@@ -776,7 +778,16 @@ AS_instrList F_codegen(F_frame frame, T_stmList stmlist) {
     munchStm(sl->head);
   il = iList; // 全局变量 static AS_instrList iList
   iList = iList_last = NULL; // 全局汇编指令表 和 最新指令清空
+
+
+
+
+  // 将汇编指令写入最终文件
   return F_procEntryExit2(il);
+}
+
+void mark(){
+  printf(">>>>>>>>>>>>>>>>>>>>> this is a mark <<<<<<<<<<<<<<<<<<<<<<");
 }
 
 #endif
