@@ -25,6 +25,10 @@
 
 const int F_wordSize = 4;
 
+void mark( string content){
+printf(">>>>>>>>>>>>>>>>>>>>> this is a mark <<<<<<<<<<<<<<<<<<<<<< {%s} \n", content);
+}
+
 /**
  * 1. 初始化寄存器 ，如返回值 rv, 栈帧 fp, 栈指针 sp 等
  */
