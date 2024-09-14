@@ -93,6 +93,7 @@ static void munchStm(T_stm s) {
       // 汇编标注， typedef S_symbol Temp_label;
       sprintf(buf, "%s:\n", S_name(s->u.LABEL));
       AS_instr label_instr = AS_Label(String(buf), s->u.LABEL);
+
       // AS_instr AS_Label(string a, Temp_label label)
       emit(label_instr);
       break;
@@ -104,19 +105,24 @@ static void munchStm(T_stm s) {
     case T_MOVE:
       src = s->u.MOVE.src;
       dst = s->u.MOVE.dst;
-      printf("move dst:  %d\n", dst->kind);
+      printf("move dst king:  %d\n", dst->kind);
+      printf("src dst kind:  %d\n", src->kind);
 
       //  目标地址为 TEMP （寄存器）
       if (dst->kind == T_TEMP) {
+
         //　向 TEMP MOVE 数据
         // TEMP_dst <- CONST, 将 CONST 加在 0 (F_ZERO) 上
         if (src->kind == T_CONST) {
+
+
           sprintf(buf, "(MIPS)ADD `d0, `s0, %d", src->u.CONST);
           AS_instr instr = AS_Oper(String(buf),
                                    Temp_TempList(dst->u.TEMP, NULL),
                                    Temp_TempList(F_ZERO(), NULL),
                                    NULL);
           emit(instr);
+
         }
           // TEMP_dst <- CONST + TEMP(right)
         else if (src->kind == T_BINOP && src->u.BINOP.op == T_plus && src->u.BINOP.left->kind == T_CONST) {
@@ -153,7 +159,7 @@ static void munchStm(T_stm s) {
         else if (src->kind == T_MEM) {
 
 
-          printf(">>>>>>>>>>>>>>>> herer");
+
           T_exp src_addr = src->u.MEM;
           T_exp left_exp = src->u.BINOP.left;
           T_exp right_exp = src->u.BINOP.right;
@@ -206,7 +212,7 @@ static void munchStm(T_stm s) {
 
           // MEM[SP + FRAME_SIZE + CONST] <- TEMP
           if (left->kind == T_TEMP && left->u.TEMP == F_FP()) {
-            sprintf(buf, "(MIPS)sw `s0, `%d+%s_framesize(`d0) or s1???", right->u.CONST, Temp_labelstring(fname));
+            sprintf(buf, "(MIPS)sw `s0, %d+%s_framesize(`d0) or s1???", right->u.CONST, Temp_labelstring(fname));
             AS_instr instr = AS_Oper(String(buf),
                                      NULL,
                                      Temp_TempList(munchExp(src), Temp_TempList(F_SP(), NULL)),
@@ -776,18 +782,13 @@ AS_instrList F_codegen(F_frame frame, T_stmList stmlist) {
   fname = F_name(frame);
   for (sl = stmlist; sl; sl = sl->tail)
     munchStm(sl->head);
+
   il = iList; // 全局变量 static AS_instrList iList
   iList = iList_last = NULL; // 全局汇编指令表 和 最新指令清空
-
-
-
 
   // 将汇编指令写入最终文件
   return F_procEntryExit2(il);
 }
 
-void mark(){
-  printf(">>>>>>>>>>>>>>>>>>>>> this is a mark <<<<<<<<<<<<<<<<<<<<<<");
-}
 
 #endif
