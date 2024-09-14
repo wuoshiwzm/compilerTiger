@@ -104,4 +104,8 @@ AS_instrList F_procEntryExit2(AS_instrList body);
 
 // 本章的代码生成只处理函数体，函数的进入 和 退出业务由此函数处理
 AS_proc F_procEntryExit3(F_frame frame, AS_instrList body);
+
+void mark( string content);
+
+
 #endif
