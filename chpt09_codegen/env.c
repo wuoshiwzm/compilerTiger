@@ -1,8 +1,13 @@
 #include <stdio.h>
 #include "util.h"
 #include "symbol.h"
+#include "absyn.h"
 #include "temp.h"
+#include "tree.h"
+#include "assem.h"
+#include "frame.h"
 #include "translate.h"
+#include "types.h"
 #include "env.h"
 
 /* 变量类型环境对象 可以添加到外层的 类型 环境中 */

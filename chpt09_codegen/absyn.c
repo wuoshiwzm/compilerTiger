@@ -1,5 +1,5 @@
-#ifndef _ABSYN_H_
-#define _ABSYN_H_
+// #ifndef _ABSYN_H_
+// #define _ABSYN_H_
 
 /*
  * 抽象语法
@@ -382,4 +382,4 @@ void printDec(A_dec dec){
     }
 }
 
-#endif
+//#endif
