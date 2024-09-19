@@ -25,7 +25,6 @@
  */
 
 // 汇编指令字符串
-char buf[100];
 static Temp_label fname = NULL; // initialized in codegen and accessed in munchStm and munchExp
 static Temp_temp munchExp(T_exp e);
 
@@ -51,11 +50,23 @@ static AS_instrList iList = NULL, iList_last = NULL;
 
 // 加入汇编列表
 static void emit(AS_instr instr) {
-  printf("    call emit: %s \n", instr->u.MOVE.assem);
+
+  printf("call emit  \n");
+  if (instr->kind == 0) {
+    printf("++++++++++++++++++||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>emit instr: %s, dst: %s, src: %s  \n", instr->u.OPER.assem, instr->u.OPER.dst, instr->u.OPER.src);
+  } else if (instr->kind == 1){
+    printf("++++++++++++++++++||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>emit instr: %s  \n", instr->u.LABEL.assem);
+  }else if (instr->kind == 2){
+    printf("++++++++++++++++++||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>emit instr: %s  \n", instr->u.MOVE.assem);
+  }
+
+
+
   if (iList == NULL) {
     iList = iList_last = AS_InstrList(instr, NULL);
   } else {
-    iList_last = iList_last->tail = AS_InstrList(instr, NULL);
+    iList_last->tail = AS_InstrList(instr, NULL);
+    iList_last = iList_last->tail;
   }
 }
 
@@ -69,7 +80,14 @@ Temp_tempList singleTemp(Temp_temp t) {
   树结构： enum {T_SEQ, T_LABEL, T_JUMP, T_CJUMP, T_MOVE, T_EXP} kind;
  */
 static void munchStm(T_stm s) {
-  printf(">>> Start munchStm stm, kind: %d\n", s->kind);
+  printf(">>> >>> Start munchStm Kind: %d,", s->kind);
+  if (s->kind == 1) {
+    printf(" label: %s\n", S_name(s->u.LABEL));
+  } else {
+    printf("\n");
+  }
+
+  char buf[100];
 
   // 打印 stm 解析
   FILE *fp = fopen("stm.tree", "w");
@@ -81,6 +99,8 @@ static void munchStm(T_stm s) {
   AS_instr cjump;
   Temp_temp ltem;
   Temp_temp rtem;
+  AS_instr instr;
+  sprintf(buf, "abc");
 
   switch (s->kind) {
 
@@ -103,36 +123,34 @@ static void munchStm(T_stm s) {
       break;
 
     case T_MOVE:
+      printf("        T_MOVE..............\n");
       src = s->u.MOVE.src;
       dst = s->u.MOVE.dst;
-      printf("move dst king:  %d\n", dst->kind);
-      printf("src dst kind:  %d\n", src->kind);
+      printf("        stm MOVE src %s (kind %d) -> dst %s (kind %d) \n", src, src->kind, dst, dst->kind);
 
       //  目标地址为 TEMP （寄存器）
       if (dst->kind == T_TEMP) {
-
+        printf("        T_MOVE   T_TEMP..............\n");
         //　向 TEMP MOVE 数据
         // TEMP_dst <- CONST, 将 CONST 加在 0 (F_ZERO) 上
         if (src->kind == T_CONST) {
-
-
           sprintf(buf, "(MIPS)ADD `d0, `s0, %d", src->u.CONST);
-          AS_instr instr = AS_Oper(String(buf),
+          instr = AS_Oper(String(buf),
                                    Temp_TempList(dst->u.TEMP, NULL),
                                    Temp_TempList(F_ZERO(), NULL),
                                    NULL);
           emit(instr);
-
         }
           // TEMP_dst <- CONST + TEMP(right)
         else if (src->kind == T_BINOP && src->u.BINOP.op == T_plus && src->u.BINOP.left->kind == T_CONST) {
           T_exp left_exp = src->u.BINOP.left;
           T_exp right_exp = src->u.BINOP.right;
           sprintf(buf, "(MIPS)ADD `d0, `s0, %d", left_exp->u.CONST);
-          AS_instr instr = AS_Oper(String(buf),
+          instr = AS_Oper(String(buf),
                                    Temp_TempList(dst->u.TEMP, NULL),
                                    Temp_TempList(munchExp(right_exp), NULL),
                                    NULL);
+          emit(instr);
         }
           // TEMP_dst <- TEMP(left) + CONST
         else if (src->kind == T_BINOP && src->u.BINOP.op == T_plus && src->u.BINOP.right->kind == T_CONST) {
@@ -150,16 +168,14 @@ static void munchStm(T_stm s) {
           T_exp left_exp = src->u.BINOP.left;
           T_exp right_exp = src->u.BINOP.right;
           sprintf(buf, "(MIPS)ADD `d0, `s0, -%d", right_exp->u.CONST);
-          AS_instr instr = AS_Oper(String(buf),
+          instr = AS_Oper(String(buf),
                                    Temp_TempList(dst->u.TEMP, NULL),
                                    Temp_TempList(munchExp(left_exp), NULL),
                                    NULL);
+          emit(instr);
         }
           // lw $dst, offset($src) 源地址为 MEM 内存  MIPS 指令
         else if (src->kind == T_MEM) {
-
-
-
           T_exp src_addr = src->u.MEM;
           T_exp left_exp = src->u.BINOP.left;
           T_exp right_exp = src->u.BINOP.right;
@@ -167,14 +183,14 @@ static void munchStm(T_stm s) {
             // TEMP_dst <- MEM[SP + FRAME_SIZE + CONST]  栈帧偏移, Temp_labelstring(fname)
             if (left_exp->kind == T_TEMP && left_exp->u.TEMP == F_FP()) {
               sprintf(buf, "(MIPS)lw `d0, %d+%s_framesize(`s0)", right_exp->u.CONST, Temp_labelstring(fname));
-              AS_instr instr = AS_Oper(String(buf), Temp_TempList(dst->u.TEMP, NULL), Temp_TempList(F_SP(), NULL),
+              instr = AS_Oper(String(buf), Temp_TempList(dst->u.TEMP, NULL), Temp_TempList(F_SP(), NULL),
                                        NULL);
               emit(instr);
             }
               // TEMP_dst <- MEM[TEMP + CONST]
             else {
               sprintf(buf, "(MIPS)lw `d0, %d(`s0)", right_exp->u.CONST);
-              AS_instr instr = AS_Oper(String(buf),
+              instr = AS_Oper(String(buf),
                                        Temp_TempList(dst->u.TEMP, NULL),
                                        Temp_TempList(munchExp(left_exp), NULL),
                                        NULL);
@@ -184,7 +200,7 @@ static void munchStm(T_stm s) {
             // TEMP_dst <- MEM[TEMP]
           else {
             sprintf(buf, "(MIPS)lw `d0, 0(`s0)", right_exp->u.CONST);
-            AS_instr instr = AS_Oper(String(buf),
+            instr = AS_Oper(String(buf),
                                      Temp_TempList(dst->u.TEMP, NULL),
                                      Temp_TempList(munchExp(src_addr), NULL),
                                      NULL);
@@ -195,7 +211,7 @@ static void munchStm(T_stm s) {
         else {
           printf("MOVE TEMP <- TEMP \n");
           sprintf(buf, "(MIPS)add `d0, `s0, `s1");
-          AS_instr instr = AS_Oper(String(buf),
+          instr = AS_Oper(String(buf),
                                    Temp_TempList(dst->u.TEMP, NULL),
                                    Temp_TempList(F_ZERO(), Temp_TempList(munchExp(src), NULL)),
                                    NULL);
@@ -204,6 +220,7 @@ static void munchStm(T_stm s) {
       }
         // 目标地址为 MEM 内存, 只修改 MEM值， 不返回
       else if (dst->kind == T_MEM) {
+        printf("        T_MOVE   T_MEM..............\n");
         // 目标内存地址
         T_exp addr = dst->u.MEM;
         if (addr->kind == T_BINOP && addr->u.BINOP.op == T_plus && addr->u.BINOP.right->kind == T_CONST) {
@@ -212,17 +229,22 @@ static void munchStm(T_stm s) {
 
           // MEM[SP + FRAME_SIZE + CONST] <- TEMP
           if (left->kind == T_TEMP && left->u.TEMP == F_FP()) {
-            sprintf(buf, "(MIPS)sw `s0, %d+%s_framesize(`d0) or s1???", right->u.CONST, Temp_labelstring(fname));
-            AS_instr instr = AS_Oper(String(buf),
-                                     NULL,
-                                     Temp_TempList(munchExp(src), Temp_TempList(F_SP(), NULL)),
-                                     NULL);
+            printf("(MIPS)sw `s0, %d+%s_framesize(`s1)\n", right->u.CONST, Temp_labelstring(fname));
+
+
+
+            sprintf(buf, "(MIPS)sw `s0, %d+%s_framesize(`s1)", right->u.CONST, Temp_labelstring(fname));
+            instr = AS_Oper(String(buf),
+                            NULL,
+                            Temp_TempList(munchExp(src), Temp_TempList(F_SP(), NULL)),
+                            NULL);
+            printf("         in munchStm emit assem::: %s  ,  %s\n", instr->u.OPER.assem, String(buf));
             emit(instr);
           }
             // MEM[TEMP + CONST] <- TEMP
           else {
-            sprintf(buf, "(MIPS)sw `s0, `%d(`d0)", right->u.CONST);
-            AS_instr instr = AS_Oper(String(buf),
+            sprintf(buf, "(MIPS)sw `s0, %d(`s1)", right->u.CONST);
+            instr = AS_Oper(String(buf),
                                      NULL,
                                      Temp_TempList(munchExp(src), Temp_TempList(munchExp(dst), NULL)),
                                      NULL);
@@ -231,8 +253,8 @@ static void munchStm(T_stm s) {
         }
           // MEM[TEMP] <- TEMP
         else {
-          sprintf(buf, "sw `s0, 0(`d0)");
-          AS_instr instr = AS_Oper(String(buf),
+          sprintf(buf, "sw `s0, 0(`s0)");
+          instr = AS_Oper(String(buf),
                                    NULL,
                                    Temp_TempList(munchExp(src), Temp_TempList(munchExp(addr), NULL)),
                                    NULL);
@@ -293,110 +315,110 @@ static void munchStm(T_stm s) {
       switch (oper) {
         case T_eq:
           // 处理等于的情况
-          sprintf(buf, "BEQ `d0 `d1 `truebr");
+          sprintf(buf, "BEQ `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BNE `d0 `d1 `falsebr");
+          sprintf(buf, "BNE `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_ne:
           // 处理不等于的情况
-          sprintf(buf, "BNE `d0 `d1 `truebr");
+          sprintf(buf, "BNE `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BEQ `d0 `d1 `falsebr");
+          sprintf(buf, "BEQ `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_lt:
           // 处理小于的情况
-          sprintf(buf, "BLT `d0 `d1 `truebr");
+          sprintf(buf, "BLT `s0 `s1 `j0");
           AS_instr true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BGE `d0 `d1 `falsebr");
+          sprintf(buf, "BGE `s0 `s1 `j0");
           AS_instr false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_gt:
           // 处理大于的情况
-          sprintf(buf, "BGT `d0 `d1 `truebr");
+          sprintf(buf, "BGT `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BLE `d0 `d1 `falsebr");
+          sprintf(buf, "BLE `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_le:
           // 处理小于等于的情况
-          sprintf(buf, "BLE `d0 `d1 `truebr");
+          sprintf(buf, "BLE `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BGT `d0 `d1 `falsebr");
+          sprintf(buf, "BGT `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_ge:
           // 处理大于等于的情况
-          sprintf(buf, "BGE `d0 `d1 `truebr");
+          sprintf(buf, "BGE `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BLT `d0 `d1 `falsebr");
+          sprintf(buf, "BLT `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_ult:
           // 处理无符号小于的情况
-          sprintf(buf, "BLTU `d0 `d1 `truebr");
+          sprintf(buf, "BLTU `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BGEU `d0 `d1 `falsebr");
+          sprintf(buf, "BGEU `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_ule:
           // 处理无符号小于等于的情况
-          sprintf(buf, "BLEU `d0 `d1 `truebr");
+          sprintf(buf, "BLEU `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BGTU `d0 `d1 `falsebr");
+          sprintf(buf, "BGTU `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_ugt:
           // 处理无符号大于的情况
-          sprintf(buf, "BGTU `d0 `d1 `truebr");
+          sprintf(buf, "BGTU `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BLEU `d0 `d1 `falsebr");
+          sprintf(buf, "BLEU `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
 
         case T_uge:
           // 处理无符号大于等于的情况
-          sprintf(buf, "BGEU `d0 `d1 `truebr");
+          sprintf(buf, "BGEU `s0 `s1 `j0");
           true_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), true_targets);
           emit(true_cjump);
 
-          sprintf(buf, "BLTU `d0 `d1 `falsebr");
+          sprintf(buf, "BLTU `s0 `s1 `j0");
           false_cjump = AS_Oper(String(buf), singleTemp(ltem), singleTemp(rtem), false_targets);
           emit(false_cjump);
           break;
@@ -408,18 +430,18 @@ static void munchStm(T_stm s) {
     default:
       assert(0);
   }
+  printf("*** *** Done munchStm. \n");
 }
 
 
 // 表达式转换
 static Temp_temp munchExp(T_exp exp) {
+  printf("--- --- munchExp, kind: %d \n", exp->kind);
 
-  Temp_temp new_temp;
+  char buf[100];
+  Temp_temp new_temp = Temp_newtemp();;
   Temp_temp ret_temp = Temp_newtemp();
   AS_instr instr;
-
-  printf(">>> munchExp kind: %d \n", exp->kind);
-
   switch (exp->kind) {
 
     case T_BINOP: {
@@ -651,27 +673,27 @@ static Temp_temp munchExp(T_exp exp) {
 
       // 常量 直接把值传给 exp 给地址赋值为常量， 并返回这个地址
     case T_CONST:
-      new_temp = Temp_newtemp();
-      sprintf(buf, "li `d0, %d \n", exp->u.CONST);
-      AS_instr const_instr = AS_Oper(String(buf),
-                                     Temp_TempList(new_temp, NULL),
-                                     NULL,
-                                     NULL);
-      emit(const_instr);
+
+      sprintf(buf, "addi `d0, `s0, %d", exp->u.CONST);
+      instr = AS_Oper(String(buf),
+                       Temp_TempList(new_temp, NULL),
+                       Temp_TempList(F_ZERO(), NULL),
+                       NULL);
+      printf("        munchExp - T_CONST , dst: %s, src: %s \n", instr->u.OPER.dst, instr->u.OPER.src);
+      emit(instr);
       return new_temp;
 
       // addi r, 0, label
     case T_NAME:
       new_temp = Temp_newtemp();
       Temp_label lab = exp->u.NAME;
-      sprintf(buf, "addi `d0, `s0, %s", Temp_labelstring(lab));
+      sprintf(buf, "addi `d0,`s0,%s", Temp_labelstring(lab));
       AS_instr instr = AS_Oper(String(buf),
                                Temp_TempList(ret_temp, NULL),
                                Temp_TempList(F_ZERO(), NULL),
                                NULL);
       emit(instr);
       return new_temp;
-      break;
 
       // ***函数调用
     case T_CALL: {
@@ -724,7 +746,7 @@ static Temp_temp munchExp(T_exp exp) {
       if (funexp->kind == T_NAME) {
         // 原表达式地址，执行完函数调用后要返回的
         Temp_label label = funexp->u.NAME;
-        sprintf(buf, "jal `r0");
+        sprintf(buf, "jal `j0");
         instr = AS_Oper(String(buf),
                         callDefs(), // 处理返回值：执行函数的返回值：F_RV()：返回值寄存器：F_RA()：返回地址寄存器，F_TEMPS()：临时变量寄存器
                         args,     // 处理参数：寄存器中参数
@@ -747,7 +769,6 @@ static Temp_temp munchExp(T_exp exp) {
 
       // 5. 返回函数的返回值（RV 寄存器中）
       return F_RV();
-      break;
     }
 
       // 基本块中 去掉了 ESEQ, 所以没有 case T_ESEQ
@@ -775,7 +796,7 @@ static Temp_tempList callDefs() {
 
 // 汇编指令生成
 AS_instrList F_codegen(F_frame frame, T_stmList stmlist) {
-  printf(">>> Start code gen ...\n");
+  printf(">>>>>> Start code gen ...\n");
   AS_instrList il;
   T_stmList sl;
   // 全局栈帧
