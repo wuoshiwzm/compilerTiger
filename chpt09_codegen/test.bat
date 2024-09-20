@@ -14,7 +14,6 @@ bison -dv tiger.y
 gcc -g -c lex.yy.c
 gcc -g -c tiger.tab.c
 
-
 gcc -g -c util.c
 gcc -g -c symbol.c
 gcc -g -c types.c
@@ -42,11 +41,10 @@ gcc -g -c main.c
 
 gcc -g main.o parse.o tiger.tab.o lex.yy.o errormsg.o util.o table.o absyn.o symbol.o prabsyn.o types.o env.o semant.o temp.o tree.o printtree.o frame.o translate.o assem.o canon.o mycodegen.o
 
-echo "testing test file ..."
-a.exe ".\testfiles\test2.tig"
-a.exe ".\testfiles\compilable\array_equality.tig"
+echo ">>> Start testing files ..."
+a.exe ".\testfiles\test37.tig"
 
-@REM set "folder_path=testfiles\book"
+@REM set "folder_path=testfiles\compilable"
 @REM for /R "%folder_path%" %%F in (*.tig) do (
 @REM   echo testing file now : "%%~fF"
 @REM   a.exe %%F
