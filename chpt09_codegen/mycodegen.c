@@ -2,8 +2,6 @@
     munchExp 针对 RISC 指令集
 */
 
-#ifndef _CODEGEN_RISC_H_
-#define _CODEGEN_RISC_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,18 +48,6 @@ static AS_instrList iList = NULL, iList_last = NULL;
 
 // 加入汇编列表
 static void emit(AS_instr instr) {
-
-  printf("call emit  \n");
-  if (instr->kind == 0) {
-    printf("++++++++++++++++++||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>emit instr: %s, dst: %s, src: %s  \n", instr->u.OPER.assem, instr->u.OPER.dst, instr->u.OPER.src);
-  } else if (instr->kind == 1){
-    printf("++++++++++++++++++||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>emit instr: %s  \n", instr->u.LABEL.assem);
-  }else if (instr->kind == 2){
-    printf("++++++++++++++++++||>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>emit instr: %s  \n", instr->u.MOVE.assem);
-  }
-
-
-
   if (iList == NULL) {
     iList = iList_last = AS_InstrList(instr, NULL);
   } else {
@@ -810,6 +796,3 @@ AS_instrList F_codegen(F_frame frame, T_stmList stmlist) {
   // 将汇编指令写入最终文件
   return F_procEntryExit2(il);
 }
-
-
-#endif
