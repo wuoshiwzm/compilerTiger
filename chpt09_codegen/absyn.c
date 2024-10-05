@@ -1,69 +1,49 @@
-// #ifndef _ABSYN_H_
-// #define _ABSYN_H_
-
 /*
- * 抽象语法
  * absyn.c - Abstract Syntax Functions. Most functions create an instance of an
  *           abstract syntax rule.
- *
-    A 开头是对应的是原程序中的"一个"实体
-    Ty _ 开头则是类型检查中的一个"抽象类" 代表了"一类"实体
-
-    如：
-    A_recordTy 是原程序中的 一个type 如：{name:string , age:int}
-    Ty_record 则是一种类型的抽象 是 Ty_ty { TyfieldList } tyfield ->{name : ty_string, age: ty_int }
  */
 
-#include <stdio.h>
 #include "util.h"
 #include "symbol.h" /* symbol table data structures */
 #include "absyn.h"  /* abstract syntax data structures */
+#include "stdio.h"
 
-/*变量
- S_symbol => a pointer to struct {string name; S_symbol}; IN A WORD one node of a list
- */
+
 A_var A_SimpleVar(A_pos pos, S_symbol sym)
-{
-	A_var p = checked_malloc(sizeof(*p));
-	p->kind = A_simpleVar;
-    p->pos = pos;
-    p->u.simple = sym;
-    return p;
+{A_var p = checked_malloc(sizeof(*p));
+ p->kind=A_simpleVar;
+ p->pos=pos;
+ p->u.simple=sym;
+ return p;
 }
 
-/* 域变量 a.b */
 A_var A_FieldVar(A_pos pos, A_var var, S_symbol sym)
-{
-	A_var p = checked_malloc(sizeof(*p));
-	p->kind=A_fieldVar;
-	p->pos=pos;
-	p->u.field.var=var;
-	p->u.field.sym=sym;
-	return p;
+{A_var p = checked_malloc(sizeof(*p));
+ p->kind=A_fieldVar;
+ p->pos=pos;
+ p->u.field.var=var;
+ p->u.field.sym=sym;
+ return p;
 }
 
-/* 数组下标 */
 A_var A_SubscriptVar(A_pos pos, A_var var, A_exp exp)
-{
-	A_var p = checked_malloc(sizeof(*p));
-	p->kind=A_subscriptVar;
-	p->pos=pos;
-	p->u.subscript.var=var;
-	p->u.subscript.exp=exp;
-	return p;
+{A_var p = checked_malloc(sizeof(*p));
+ p->kind=A_subscriptVar;
+ p->pos=pos;
+ p->u.subscript.var=var;
+ p->u.subscript.exp=exp;
+ return p;
 }
 
-/* 表达式 */
+
 A_exp A_VarExp(A_pos pos, A_var var)
-{
-	A_exp p = checked_malloc(sizeof(*p));
-	p->kind=A_varExp;
-	p->pos=pos;
-	p->u.var=var;
-	return p;
+{A_exp p = checked_malloc(sizeof(*p));
+ p->kind=A_varExp;
+ p->pos=pos;
+ p->u.var=var;
+ return p;
 }
 
-/* null 表达式 */
 A_exp A_NilExp(A_pos pos)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_nilExp;
@@ -71,22 +51,12 @@ A_exp A_NilExp(A_pos pos)
  return p;
 }
 
-/* int 变量 */
 A_exp A_IntExp(A_pos pos, int i)
-{A_exp p = checked_malloc(sizeof(*p));
+{ A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_intExp;
  p->pos=pos;
  p->u.intt=i;
  return p;
-}
-
-A_exp A_DoubleExp(A_pos pos, double d)
-{
-	A_exp p = checked_malloc(sizeof(*p));
-	p->kind = A_doubleExp;
-	p->pos  = pos;
-	p->u.doublee = d;
-	return p;
 }
 
 A_exp A_StringExp(A_pos pos, string s)
@@ -97,7 +67,6 @@ A_exp A_StringExp(A_pos pos, string s)
  return p;
 }
 
-/* 可调用的表达式 */
 A_exp A_CallExp(A_pos pos, S_symbol func, A_expList args)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_callExp;
@@ -106,8 +75,7 @@ A_exp A_CallExp(A_pos pos, S_symbol func, A_expList args)
  p->u.call.args=args;
  return p;
 }
-
-/* 双目运算符 */
+/*
 A_exp A_OpExp(A_pos pos, A_oper oper, A_exp left, A_exp right)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_opExp;
@@ -117,8 +85,77 @@ A_exp A_OpExp(A_pos pos, A_oper oper, A_exp left, A_exp right)
  p->u.op.right=right;
  return p;
 }
+*/
 
-/*  */
+
+//Vin-edit
+/*
+A_exp A_OpExp(A_pos pos, A_oper oper, A_exp left, A_exp right)
+{
+	//printf("VINPRINT: Left operation : %d , Right_operation: %d, Left kind : %d , Current Operation : %d , Left value:%d Right value:%d \n ,",left->u.op.oper,right->u.op.oper,left->kind,oper,left->u.intt,right->u.intt);
+	if (left->kind == A_intExp  && right->kind == A_intExp)
+	{
+		//Checking operation and performing const folding
+		switch(oper)
+		{
+		case A_plusOp: return A_IntExp(pos, left->u.intt + right->u.intt);break;
+		case A_minusOp: return A_IntExp(pos, left->u.intt - right->u.intt);break;
+		case A_timesOp:  return A_IntExp(pos, left->u.intt * right->u.intt);break;
+		case A_divideOp:  return A_IntExp(pos, left->u.intt / right->u.intt);break;
+		default: printf("invalid operand\n"); break;
+		}
+		
+		}
+		
+	else if ( (left->kind == A_opExp  && right->kind == A_intExp) && ((left->u.op.oper)!= A_timesOp) &&((left->u.op.oper)!= A_divideOp)&&((left->u.op.right)->kind==A_intExp))
+	{
+		A_exp leftexp,op_chl,op_chr;
+		leftexp= left->u.op.right;
+		//printf("VINPRINT: Entered here\n");
+		//Checking operation and performing const folding
+		switch(oper)
+		{
+		case A_plusOp: leftexp->u.intt = leftexp->u.intt + right->u.intt;break;
+		case A_minusOp: leftexp->u.intt = leftexp->u.intt - right->u.intt;break;
+		case A_timesOp:  leftexp->u.intt = leftexp->u.intt * right->u.intt;break;
+		case A_divideOp:  leftexp->u.intt = leftexp->u.intt / right->u.intt;break;
+		default: printf("invalid operand\n"); break;
+		}
+		
+		left->u.op.right = leftexp;
+		return left;
+	}
+
+	else
+	{
+		
+	A_exp p = checked_malloc(sizeof(*p));
+	p->kind = A_opExp;
+	p->pos = pos;
+	p->u.op.oper = oper;
+	p->u.op.left = left;
+	p->u.op.right = right;
+	//printf("VINPRINT: Entered last else Operation : %d , Right Exp operation: %d\n",p->u.op.oper, (p->u.op.right)->u.op.oper);
+	return p;
+	
+	}
+}
+*/
+
+A_exp A_OpExp(A_pos pos, A_oper oper, A_exp left, A_exp right)
+{
+	
+	A_exp p = checked_malloc(sizeof(*p));
+	p->kind = A_opExp;
+	p->pos = pos;
+	p->u.op.oper = oper;
+	p->u.op.left = left;
+	p->u.op.right = right;
+	return p;
+
+}
+
+
 A_exp A_RecordExp(A_pos pos, S_symbol typ, A_efieldList fields)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_recordExp;
@@ -128,7 +165,6 @@ A_exp A_RecordExp(A_pos pos, S_symbol typ, A_efieldList fields)
  return p;
 }
 
-/* exp 序列 */
 A_exp A_SeqExp(A_pos pos, A_expList seq)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_seqExp;
@@ -137,17 +173,16 @@ A_exp A_SeqExp(A_pos pos, A_expList seq)
  return p;
 }
 
-/* 赋值表达式 */
 A_exp A_AssignExp(A_pos pos, A_var var, A_exp exp)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_assignExp;
  p->pos=pos;
  p->u.assign.var=var;
  p->u.assign.exp=exp;
+ //Vin-edit removed const allocation from here
  return p;
 }
 
-/* if 表达式 */
 A_exp A_IfExp(A_pos pos, A_exp test, A_exp then, A_exp elsee)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_ifExp;
@@ -158,7 +193,6 @@ A_exp A_IfExp(A_pos pos, A_exp test, A_exp then, A_exp elsee)
  return p;
 }
 
-/* while表达式 */
 A_exp A_WhileExp(A_pos pos, A_exp test, A_exp body)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_whileExp;
@@ -168,7 +202,6 @@ A_exp A_WhileExp(A_pos pos, A_exp test, A_exp body)
  return p;
 }
 
-/* for表达式 */
 A_exp A_ForExp(A_pos pos, S_symbol var, A_exp lo, A_exp hi, A_exp body)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_forExp;
@@ -181,7 +214,6 @@ A_exp A_ForExp(A_pos pos, S_symbol var, A_exp lo, A_exp hi, A_exp body)
  return p;
 }
 
-/* break表达式 */
 A_exp A_BreakExp(A_pos pos)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_breakExp;
@@ -189,7 +221,6 @@ A_exp A_BreakExp(A_pos pos)
  return p;
 }
 
-/* let 语句 */
 A_exp A_LetExp(A_pos pos, A_decList decs, A_exp body)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_letExp;
@@ -199,7 +230,6 @@ A_exp A_LetExp(A_pos pos, A_decList decs, A_exp body)
  return p;
 }
 
-/* array 声明 */
 A_exp A_ArrayExp(A_pos pos, S_symbol typ, A_exp size, A_exp init)
 {A_exp p = checked_malloc(sizeof(*p));
  p->kind=A_arrayExp;
@@ -210,7 +240,6 @@ A_exp A_ArrayExp(A_pos pos, S_symbol typ, A_exp size, A_exp init)
  return p;
 }
 
-/* function 声明 */
 A_dec A_FunctionDec(A_pos pos, A_fundecList function)
 {A_dec p = checked_malloc(sizeof(*p));
  p->kind=A_functionDec;
@@ -219,7 +248,6 @@ A_dec A_FunctionDec(A_pos pos, A_fundecList function)
  return p;
 }
 
-/* 变量 声明 */
 A_dec A_VarDec(A_pos pos, S_symbol var, S_symbol typ, A_exp init)
 {A_dec p = checked_malloc(sizeof(*p));
  p->kind=A_varDec;
@@ -228,11 +256,11 @@ A_dec A_VarDec(A_pos pos, S_symbol var, S_symbol typ, A_exp init)
  p->u.var.typ=typ;
  p->u.var.init=init;
  p->u.var.escape=TRUE;
+// removed Constant table entry form here
+	 
  return p;
 }
 
-/* type 声明 */
-/* Ty_record 则是一种类型的抽象 是 Ty_ty { TyfieldList } tyfield ->{name : ty_string, age: ty_int } */
 A_dec A_TypeDec(A_pos pos, A_nametyList type)
 {A_dec p = checked_malloc(sizeof(*p));
  p->kind=A_typeDec;
@@ -241,7 +269,6 @@ A_dec A_TypeDec(A_pos pos, A_nametyList type)
  return p;
 }
 
-/* name type */
 A_ty A_NameTy(A_pos pos, S_symbol name)
 {A_ty p = checked_malloc(sizeof(*p));
  p->kind=A_nameTy;
@@ -250,8 +277,6 @@ A_ty A_NameTy(A_pos pos, S_symbol name)
  return p;
 }
 
-/* record type */
-/* A_recordTy 是原程序中的 一个type 如：{name:string , age:int} */
 A_ty A_RecordTy(A_pos pos, A_fieldList record)
 {A_ty p = checked_malloc(sizeof(*p));
  p->kind=A_recordTy;
@@ -260,7 +285,6 @@ A_ty A_RecordTy(A_pos pos, A_fieldList record)
  return p;
 }
 
-/* 一个 array 类型的 type */
 A_ty A_ArrayTy(A_pos pos, S_symbol array)
 {A_ty p = checked_malloc(sizeof(*p));
  p->kind=A_arrayTy;
@@ -269,7 +293,6 @@ A_ty A_ArrayTy(A_pos pos, S_symbol array)
  return p;
 }
 
-/* 一个域，escape=TRUE表示编译时候要解析 */
 A_field A_Field(A_pos pos, S_symbol name, S_symbol typ)
 {A_field p = checked_malloc(sizeof(*p));
  p->pos=pos;
@@ -279,7 +302,6 @@ A_field A_Field(A_pos pos, S_symbol name, S_symbol typ)
  return p;
 }
 
-/* 域的列表（链表） */
 A_fieldList A_FieldList(A_field head, A_fieldList tail)
 {A_fieldList p = checked_malloc(sizeof(*p));
  p->head=head;
@@ -287,7 +309,6 @@ A_fieldList A_FieldList(A_field head, A_fieldList tail)
  return p;
 }
 
-/* 表达式的列表（链表） */
 A_expList A_ExpList(A_exp head, A_expList tail)
 {A_expList p = checked_malloc(sizeof(*p));
  p->head=head;
@@ -295,9 +316,9 @@ A_expList A_ExpList(A_exp head, A_expList tail)
  return p;
 }
 
-/* 函数声明 */
-A_fundec A_Fundec(A_pos pos, S_symbol name, A_fieldList params, S_symbol result, A_exp body){
- A_fundec p = checked_malloc(sizeof(*p));
+A_fundec A_Fundec(A_pos pos, S_symbol name, A_fieldList params, S_symbol result,
+		  A_exp body)
+{A_fundec p = checked_malloc(sizeof(*p));
  p->pos=pos;
  p->name=name;
  p->params=params;
@@ -306,7 +327,6 @@ A_fundec A_Fundec(A_pos pos, S_symbol name, A_fieldList params, S_symbol result,
  return p;
 }
 
-/* 函数生成列表 */
 A_fundecList A_FundecList(A_fundec head, A_fundecList tail)
 {A_fundecList p = checked_malloc(sizeof(*p));
  p->head=head;
@@ -314,7 +334,6 @@ A_fundecList A_FundecList(A_fundec head, A_fundecList tail)
  return p;
 }
 
-/* 声明列表 */
 A_decList A_DecList(A_dec head, A_decList tail)
 {A_decList p = checked_malloc(sizeof(*p));
  p->head=head;
@@ -322,7 +341,6 @@ A_decList A_DecList(A_dec head, A_decList tail)
  return p;
 }
 
-/*  */
 A_namety A_Namety(S_symbol name, A_ty ty)
 {A_namety p = checked_malloc(sizeof(*p));
  p->name=name;
@@ -330,7 +348,6 @@ A_namety A_Namety(S_symbol name, A_ty ty)
  return p;
 }
 
-/* A_Namety 列表 */
 A_nametyList A_NametyList(A_namety head, A_nametyList tail)
 {A_nametyList p = checked_malloc(sizeof(*p));
  p->head=head;
@@ -338,7 +355,6 @@ A_nametyList A_NametyList(A_namety head, A_nametyList tail)
  return p;
 }
 
-/* 有name的表达式 */
 A_efield A_Efield(S_symbol name, A_exp exp)
 {A_efield p = checked_malloc(sizeof(*p));
  p->name=name;
@@ -346,7 +362,6 @@ A_efield A_Efield(S_symbol name, A_exp exp)
  return p;
 }
 
-/* 有name的表达式 列表 */
 A_efieldList A_EfieldList(A_efield head, A_efieldList tail)
 {A_efieldList p = checked_malloc(sizeof(*p));
  p->head=head;
@@ -354,32 +369,581 @@ A_efieldList A_EfieldList(A_efield head, A_efieldList tail)
  return p;
 }
 
-void printExp(A_exp exp){
-    const char* enums[16] = {
-            "A_varExp", "A_nilExp", "A_intExp", "A_doubleExp", "A_stringExp", "A_callExp", "A_opExp", "A_recordExp",
-            "A_seqExp", "A_assignExp", "A_ifExp", "A_whileExp", "A_forExp", "A_breakExp", "A_letExp", "A_arrayExp"};
-    printf(" ---------->>>>> Exp info, kind: %s ", enums[exp->kind]);
-    if(exp->kind == 0){
-        printf(" (%s)\n",exp->u.stringg);
-    }
-    if(exp->kind == 2){
-        printf("( %d )\n", exp->u.intt);
-    }
-    printf("\n");
+void print_S_symbol(S_symbol s) {
+  if(s == NULL) 
+     printf("UnDefined");
+  else 
+     printf("%s", S_name(s));
 }
 
-void printDec(A_dec dec){
-    const char* enums[16] = { "A_functionDec", "A_varDec", "A_typeDec" };
-    printf("    | \n");
-    printf("     ---------->>>>> Declare info, kind: %s  ", enums[dec->kind]);
 
-    if(dec->kind == 0){
-        printf(" function: %s. \n", S_name( dec->u.function->head->name));
-    }
-
-    if(dec->kind == 1){
-        printf(" var: %s. \n", S_name(dec->u.var.var));
-    }
+void print_absyn_exp(A_exp exp, int indent) {
+  if(exp == NULL) return; 
+  switch(exp->kind) {
+  case A_varExp:
+    print_VarExp(exp, indent); 
+    break;
+  case A_nilExp:
+    print_NilExp(exp, indent); 
+    break;
+  case A_intExp:
+    print_IntExp(exp, indent); 
+    break;
+  case A_stringExp:
+    print_StringExp(exp, indent); 
+    break;
+  case A_callExp:
+    print_CallExp(exp, indent); 
+    break;
+  case A_opExp:
+    print_OpExp(exp, indent); 
+    break;
+  case A_recordExp:
+    print_RecordExp(exp, indent); 
+    break;
+  case A_seqExp:
+    print_SeqExp(exp, indent); 
+    break;
+  case A_assignExp:
+    print_AssignExp(exp, indent); 
+    break;
+  case A_ifExp:
+    print_IfExp(exp, indent); 
+    break;
+  case A_whileExp:
+     print_WhileExp(exp, indent); 
+    break;
+  case A_forExp:
+    print_ForExp(exp, indent); 
+    break;
+  case A_breakExp:
+    print_BreakExp(exp, indent); 
+    break;
+  case A_letExp:
+    print_LetExp(exp, indent); 
+    break;
+  case A_arrayExp:
+    print_ArrayExp(exp, indent); 
+    break;
+  default:
+    printf("Illegal Expression");
+  }
 }
 
-//#endif
+void print_absyn_var(A_var var, int indent) {
+  if(var == 0) return; 
+  switch(var->kind) {
+  case A_simpleVar:
+    print_SimpleVar(var, indent);
+    break;
+  case A_fieldVar:
+    print_FieldVar(var, indent);
+    break;
+  case A_subscriptVar:
+    print_SubscriptVar(var, indent);
+    break;
+  default:
+    printf("Illegal Var"); 
+  }
+}
+
+void print_absyn_dec(A_dec dec, int indent) {
+  if(dec == 0) return; 
+  switch (dec->kind) {
+  case A_functionDec:
+    print_FunctionDec(dec, indent); 
+    break; 
+  case A_varDec:
+    print_VarDec(dec, indent);
+    break; 
+  case A_typeDec:
+    print_TypeDec(dec, indent);
+    break; 
+  default:
+    printf("Illegal Dec");
+  }
+}
+
+void print_absyn_ty(A_ty ty, int indent) {
+  if(ty == 0) return; 
+  switch(ty->kind) {
+  case A_nameTy:
+    print_NameTy(ty, indent);
+    break; 
+  case A_recordTy:
+    print_RecordTy(ty, indent);
+    break; 
+  case A_arrayTy:
+    print_ArrayTy(ty, indent);
+    break;
+  default:
+    printf("Illegal Ty");
+  }
+}
+
+void print_absyn_oper(A_oper oper) {
+  switch(oper) {
+  case A_plusOp:
+    printf("+");
+    break;
+  case A_minusOp:
+    printf("-");
+    break;
+  case A_timesOp:
+    printf("*");
+    break;
+  case A_divideOp:
+    printf("*");
+    break;
+  case A_eqOp:
+    printf("=");
+    break; 
+  case A_neqOp:
+    printf("-");
+    break;
+  case A_ltOp:
+    printf("<");
+    break; 
+  case A_leOp:
+    printf("<=");
+    break;
+  case A_gtOp:
+    printf(">");
+    break;
+  case A_geOp:
+    printf(">=");
+    break;
+  default:
+    printf("Illegal Operator"); 
+  }
+}
+
+
+void print_SimpleVar(A_var var, int indent){
+  print_indent(indent);
+  
+  printf("SimpleVar: "); 
+  print_S_symbol(var->u.simple);
+  print_end(); 
+}
+
+void print_FieldVar(A_var var, int indent) {
+  print_indent(indent);
+  printf("FieldVar: ");
+
+  print_indent(indent);
+  printf(" sym = ");
+  print_S_symbol(var->u.field.sym);
+
+  print_indent(indent);
+  printf(" var = ");
+  print_absyn_var(var->u.field.var, indent + 1);
+
+  print_end(); 
+}
+
+void print_SubscriptVar(A_var var, int indent) {
+  print_indent(indent);
+  printf("SubscriptVar: ");
+
+  print_indent(indent);
+  printf(" var = ");
+  print_absyn_var(var->u.subscript.var, indent + 1);
+
+  print_indent(indent);
+  printf(" exp = ");
+  print_absyn_exp(var->u.subscript.exp, indent + 1);
+
+  print_end();  
+}
+
+void print_VarExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("VarExp: ");
+  print_absyn_var(exp->u.var, indent + 1);
+
+  print_end(); 
+}
+
+void print_NilExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("NilExp");
+
+  print_end(); 
+}
+
+void print_IntExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("IntExp: %d", exp->u.intt);
+  print_end(); 
+}
+
+void print_StringExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("StringExp: %s", exp->u.stringg);
+
+  print_end(); 
+}
+
+void print_CallExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("CallExp: ");
+
+  print_indent(indent);
+  printf(" func = ");
+  print_S_symbol(exp->u.call.func);
+
+  print_indent(indent);
+  printf(" args = ");
+  print_ExpList(exp->u.call.args, indent + 1);
+
+  print_end(); 
+}
+
+void print_OpExp(A_exp exp, int indent) {
+  print_indent(indent);
+
+  printf("OpExp ("); 
+  print_absyn_oper(exp->u.op.oper);
+  printf(")"); 
+
+  print_indent(indent);
+  printf(" left"); 
+  print_absyn_exp(exp->u.op.left, indent + 1);
+
+  print_indent(indent);
+  printf(" right"); 
+  print_absyn_exp(exp->u.op.right, indent + 1);
+
+  print_end(); 
+}
+
+void print_RecordExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("RecordExp: ");
+
+  print_indent(indent);
+  printf(" typ =  ");
+  print_S_symbol(exp->u.record.typ);
+  
+  print_indent(indent);
+  printf(" fields = ");
+  print_EfieldList(exp->u.record.fields, indent + 1);
+  
+  print_end(); 
+}
+
+void print_SeqExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("SeqExp: ");
+  print_ExpList(exp->u.seq, indent + 1); 
+
+  print_end(); 
+}
+
+void print_AssignExp(A_exp exp, int indent) {
+  print_indent(indent);
+
+  printf("Assign: ");
+
+  print_indent(indent);
+  printf(" var = ");
+  print_absyn_var(exp->u.assign.var, indent + 1);
+
+  print_indent(indent);
+  printf(" exp = ");
+  print_absyn_exp(exp->u.assign.exp, indent + 1);  
+
+  print_end(); 
+}
+
+void print_IfExp(A_exp exp, int indent) {
+  print_indent(indent);
+
+  printf("If: ");
+
+  print_indent(indent);
+  printf(" test = ");
+  print_absyn_exp(exp->u.iff.test, indent + 1);
+
+  print_indent(indent);
+  printf(" then = ");
+  print_absyn_exp(exp->u.iff.then, indent + 1);
+
+  print_indent(indent);
+  printf(" else = ");
+  print_absyn_exp(exp->u.iff.elsee, indent + 1); 
+
+  print_end();
+}
+
+void print_WhileExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("While:");
+
+  print_indent(indent);
+  printf(" test = "); 
+  print_absyn_exp(exp->u.whilee.test, indent + 1);
+
+  print_indent(indent);
+  printf(" body = "); 
+  print_absyn_exp(exp->u.whilee.body, indent + 1);
+
+  print_end();
+}
+
+void print_ForExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("For: ", exp->u.forr.escape);
+
+  print_indent(indent);
+  printf(" escape = %d", exp->u.forr.escape);
+
+  print_indent(indent);
+  printf(" var = ");
+  print_S_symbol(exp->u.forr.var);
+  
+  printf(" low = "); 
+  print_indent(indent);
+  print_absyn_exp(exp->u.forr.lo, indent + 1);
+  
+  printf(" high = "); 
+  print_indent(indent);
+  print_absyn_exp(exp->u.forr.hi, indent + 1);
+  
+  printf(" body "); 
+  print_indent(indent);
+  print_absyn_exp(exp->u.forr.body, indent + 1);
+  
+  print_end();
+}
+
+void print_BreakExp(A_exp exp, int indent) {
+  print_indent(indent);
+
+  printf("Break: ");
+  
+  print_end();
+}
+
+void print_LetExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("Let: ");
+
+  print_indent(indent);
+  printf(" decs = ");
+  print_DecList(exp->u.let.decs, indent + 1);
+
+  print_indent(indent);
+  printf(" body = ");
+  print_absyn_exp(exp->u.let.body, indent + 1); 
+
+  print_end();
+}
+
+void print_ArrayExp(A_exp exp, int indent) {
+  print_indent(indent);
+  printf("Array: ");
+
+  print_indent(indent);
+  printf(" type = ");
+  print_S_symbol(exp->u.array.typ);
+  
+  print_indent(indent);
+  printf(" size = "); 
+  print_absyn_exp(exp->u.array.size, indent + 1);
+  
+  print_indent(indent);
+  printf(" init = ");
+  print_absyn_exp(exp->u.array.init, indent + 1); 
+
+  print_end();
+}
+
+void print_FunctionDec(A_dec dec, int indent) {
+  print_indent(indent);
+
+  printf("FunctionDec: ");
+  print_FundecList(dec->u.function, indent + 1);
+
+  print_end();
+}
+
+void print_VarDec(A_dec dec, int indent) {
+  print_indent(indent);
+  printf("VarDec: ");
+  
+  print_indent(indent);
+  printf(" name = ");
+  print_S_symbol(dec->u.var.var);
+
+  print_indent(indent);
+  printf(" escape = %d ", dec->u.var.escape);
+
+  print_indent(indent);
+  printf(" type = ");
+  print_S_symbol(dec->u.var.typ);
+
+  print_indent(indent);
+  printf(" init = ");
+  print_absyn_exp(dec->u.var.init, indent + 1);
+  
+  print_end();
+}
+
+void print_TypeDec(A_dec dec, int indent) {
+  print_indent(indent);
+  printf("TypeDec: ");
+
+  print_NametyList(dec->u.type, indent + 1);
+  print_end();
+}
+
+void print_NameTy(A_ty ty, int indent) {
+  print_indent(indent);
+
+  printf("NameTy: ");
+  print_S_symbol(ty->u.name);
+
+  print_end();
+}
+
+void print_RecordTy(A_ty ty, int indent) {
+  print_indent(indent);
+
+  printf("RecordTy: ");
+  print_FieldList(ty->u.record, indent + 1); 
+
+  print_end();
+}
+
+void print_ArrayTy(A_ty ty, int indent) {
+  print_indent(indent);
+
+  printf("ArrayTy: ");
+  print_S_symbol(ty->u.array);
+  
+  print_end();
+}
+
+
+void print_Field(A_field field, int indent) {
+  print_indent(indent);
+
+  printf("Field: ");
+
+  print_indent(indent);
+  printf(" escape = %d ", field->escape);
+
+  print_indent(indent);
+  printf(" name = ");
+  print_S_symbol(field->name);
+
+  print_indent(indent);
+  printf(" type = ");
+  print_S_symbol(field->typ);
+  
+  print_end();
+}
+void print_Fundec(A_fundec fundec, int indent) {
+  print_indent(indent);
+
+  printf("Fundec: ");
+
+  print_indent(indent);
+  printf(" result = "); 
+  print_S_symbol(fundec->result);
+
+  print_indent(indent);
+  printf(" name = "); 
+  print_S_symbol(fundec->name);
+
+  print_indent(indent);
+  printf(" params = "); 
+  print_FieldList(fundec->params, indent + 1);
+
+  print_indent(indent);
+  printf(" body = "); 
+  print_absyn_exp(fundec->body, indent + 1); 
+
+  print_end();
+}
+
+void print_Namety(A_namety namety, int indent) {
+  print_indent(indent);
+  printf("Namety: ");
+
+  print_indent(indent);
+  printf(" name = ");
+  print_S_symbol(namety->name);
+
+  print_indent(indent);
+  printf(" type = ");
+  print_absyn_ty(namety->ty, indent + 1);
+  
+  print_end();
+}
+
+void print_Efield(A_efield efield, int indent) {
+  print_indent(indent);
+  printf("Efield: ");
+
+  print_indent(indent);
+  printf(" name = ");
+  print_S_symbol(efield->name);
+
+  print_indent(indent);
+  printf(" exp = ");
+  print_absyn_exp(efield->exp, indent + 1);
+  
+  print_end();
+}
+
+
+void print_EfieldList(A_efieldList efieldList, int indent) {
+  if(efieldList == NULL) return; 
+  print_Efield(efieldList->head, indent);
+  print_EfieldList(efieldList->tail, indent);
+}
+
+void print_FieldList(A_fieldList fieldList, int indent) {
+  if(fieldList == NULL) return; 
+  print_Field(fieldList->head, indent);
+  print_FieldList(fieldList->tail, indent);
+}
+
+void print_ExpList(A_expList expList, int indent) {
+  if(expList == NULL) return; 
+  print_absyn_exp(expList->head, indent);
+  print_ExpList(expList->tail, indent);   
+}
+
+void print_NametyList(A_nametyList nametyList, int indent) {
+  if(nametyList == NULL) return; 
+  print_Namety(nametyList->head, indent);
+  print_NametyList(nametyList->tail, indent); 
+}
+
+void print_FundecList(A_fundecList fundecList, int indent) {
+  if(fundecList == NULL) return; 
+  print_Fundec(fundecList->head, indent);
+  print_FundecList(fundecList->tail, indent);
+}
+
+
+void print_DecList(A_decList decList, int indent) {
+  if(decList == NULL) return; 
+  print_absyn_dec(decList->head, indent);
+  print_DecList(decList->tail, indent); 
+}
+
+
+void print_indent(int indent) {
+  int i;
+  printf("\n");
+  for (i = 0; i < indent; i++)
+    printf("    ");
+}
+
+void print_end() {
+}

@@ -36,23 +36,23 @@ A_exp parse(string fname) {
   return NULL;
 }
 
-int main(int argc, char **argv) {
+// int main(int argc, char **argv) {
 
-  if (argc != 2) {
-    fprintf(stderr, "usage: a.out filename\n");
-    exit(1);
-  }
+//   if (argc != 2) {
+//     fprintf(stderr, "usage: a.out filename\n");
+//     exit(1);
+//   }
 
-  printf("Start parsing %s >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", argv[1]);
+//   printf("Start parsing %s >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", argv[1]);
 
-  // 抽象语法
-  A_exp temp = parse(argv[1]);
+//   // 抽象语法
+//   A_exp temp = parse(argv[1]);
 
-  /* 类型检查 */
-  if (temp) {
-//        pr_exp(stdout, temp, 4);
-    F_fragList flist = SEM_transProg(temp);
+//   /* 类型检查 */
+//   if (temp) {
+// //        pr_exp(stdout, temp, 4);
+//     F_fragList flist = SEM_transProg(temp);
 
-  }
-  return 0;
-}
+//   }
+//   return 0;
+// }
