@@ -3,6 +3,7 @@
 #include <string.h> /* for strcpy */
 #include "util.h"
 #include "table.h"
+#include "table.c"
 #include "symbol.h"
 #include "absyn.h"
 #include "temp.h"
@@ -16,6 +17,8 @@
 #include "flowgraph.h"
 #include "liveness.h"
 
+#define TABSIZE 127
+
 // 将节点加入控制流图
 static void enterLiveMap(G_table t, G_node flowNode, Temp_tempList temps);
 
@@ -27,7 +30,7 @@ Temp_tempList tempListMinus(Temp_tempList a, Temp_tempList b);
 Temp_tempList tempListUnion(Temp_tempList a, Temp_tempList b);
 
 // 判断两个 出口/入口活跃表 是否相等
-bool G_table_equal(G_table t1, G_table t2);
+// bool G_table_equal(G_table t1, G_table t2);
 
 
 /**
@@ -63,10 +66,12 @@ struct Live_graph Live_liveness(G_graph flow){
   // 循环更新 in, out , 直到 不再变化
   {
     G_table in1 = G_empty(), out1 = G_empty(); // 初始化 in' out'
-    bool stop = FALSE;
+    bool stop = TRUE;
 
     // 遍历所有节点
     do {
+
+      // 进行一次遍历
       for (G_nodeList nodes = G_nodes(flow); nodes; nodes = nodes->tail) {
         G_node n = nodes->head;
 
@@ -93,50 +98,35 @@ struct Live_graph Live_liveness(G_graph flow){
           }
         }
 
+        // // 使用
+        // Temp_tempList ins = FG_use(n);
+        // Temp_tempList last = NULL;
+        // for(Temp_tempList l = ins; l; l = l->tail) last = l;
+        // // 定值
+        // Temp_tempList a,b,c;
+        // TAB_table t = TAB_empty();
+        // for(Temp_tempList l = FG_def(n); l; l= l->tail) TAB_enter(t, l->head, (void *) TRUE);
+      }
 
+      /* 4. until in′[n] = in[n] and out′[n] = out[n] *** for all n ***
+       *    判断入口/出口活跃度表不再变化
+       */
+      int loop = 1;
+      for (G_nodeList nodes = G_nodes(flow); nodes && loop == 1; nodes = nodes->tail) {
+        G_node n = nodes->head;
+        // 获取 in[n]，in′[n] static Temp_tempList lookupLiveMap(G_table t, G_node flownode
+        Temp_tempList in_n = lookupLiveMap(in, n);
+        Temp_tempList in1_n = lookupLiveMap(in1, n);
 
-        // 使用
-        Temp_tempList ins = FG_use(n);
-        Temp_tempList last = NULL;
-        for(Temp_tempList l = ins; l; l = l->tail) last = l;
+        // 获取 out′[n]
+        Temp_tempList out_n = lookupLiveMap(out, n);
+        Temp_tempList out1_n = lookupLiveMap(out1, n);
 
-        // 定值
-        Temp_tempList a,b,c;
-        TAB_table t = TAB_empty();
-        for(Temp_tempList l = FG_def(n); l; l= l->tail) TAB_enter(t, l->head, (void *) TRUE);
-
-
-
-
-
-
-
-
-
-
-
-
-
-        /* 4. until in′[n] = in[n] and out′[n] = out[n] *** for all n ***
-         *    判断入口/出口活跃度表不再变化
-         */
-        if (G_table_equal(in1, in) && G_table_equal(out1, out)) stop = TRUE;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        // 只要有一个节点的 in, out 变化为， 就要继续遍历
+        if (chk_G_table_change(in1, in) || chk_G_table_change(out1, out)){
+           stop = FALSE;
+           loop = 0;
+        }
       }
     } while (!stop);
     free(in1), free(out1);
@@ -144,9 +134,11 @@ struct Live_graph Live_liveness(G_graph flow){
 
 
   // 生成出口活跃表 out_table
+}
 
 
-
+bool chk_G_table_change(Temp_tempList t1, Temp_tempList t2){
+  
 }
 
 
@@ -164,10 +156,6 @@ Temp_tempList tempListUnion(Temp_tempList a, Temp_tempList b){
   return NULL;
 }
 
-
-bool G_table_equal(G_table t1, G_table t2){
-
-}
 
 
 // Live_moveList 构造函数
