@@ -1,6 +1,3 @@
-#ifndef _GRAPH_C_
-#define _GRAPH_C_
-
 /*
  * graph.c - Functions to manipulate and create control flow and
  *           interference graphs.
@@ -169,5 +166,3 @@ void *G_look(G_table t, G_node node)
 {
   return TAB_look(t, node);
 }
-
-#endif
