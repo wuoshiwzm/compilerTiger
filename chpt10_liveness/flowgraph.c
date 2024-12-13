@@ -98,4 +98,42 @@ G_graph FG_AssemFlowGraph(AS_instrList il) {
 }
 
 
+void FG_Showinfo(FILE *out, AS_instr instr, Temp_map map){
 
+  // ???
+  char* code_str;  // 汇编语句
+  char* code_p;
+  char r[200];  // ???
+
+  switch (instr->kind) {
+    case I_OPER:
+      code_str = instr->u.OPER.assem;
+      code_p = strrchr(code_str, '\n');  // 将代码中的 换行 \n 换成 \0
+      if(code_p != NULL){
+        *code_p = '\0';
+      }
+      // 格式化汇编语句并打印
+      AS_format(r, code_str, instr->u.OPER.dst, instr->u.OPER.src, instr->u.OPER.jumps, map);
+      break;
+
+    case I_LABEL:
+      code_str = instr->u.LABEL.assem;
+      code_p = strrchr(code_str, '\n');
+      if(code_p != NULL){
+        *code_p = '\0';
+      }
+      AS_format(r, code_str, NULL, NULL, NULL, map);
+      break;
+
+    case I_MOVE:
+      code_str = instr->u.MOVE.assem;
+      code_p = strrchr(code_str, '\n');
+      if(code_p != NULL){
+        *code_p = '\0';
+      }
+      AS_format(r, code_str, instr->u.MOVE.dst, instr->u.MOVE.src, NULL, map);
+      break;
+
+  }
+  fprintf(out,  "[%20s] ", r);
+}
