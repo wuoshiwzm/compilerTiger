@@ -11,5 +11,6 @@ bool FG_isMove(G_node n);
 G_graph FG_AssemFlowGraph(AS_instrList il);
 
 
+void FG_Showinfo(FILE *out, AS_instr instr, Temp_map map);
 
 #endif
