@@ -43,6 +43,8 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
   iList = F_codegen(frame, stmList); /* 9 */
   fprintf(out, "BEGIN %s\n", Temp_labelstring(F_name(frame)));
 
+  Temp_map map = Temp_layerMap(F_tempMap(), Temp_name());
+
   // 2. 初始化全局寄存器 F_tempMap()
   AS_printInstrList(out, iList, Temp_layerMap(F_tempMap(), Temp_name()));
   fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
@@ -51,7 +53,7 @@ static void doProc(FILE *out, F_frame frame, T_stm body) {
   proc = F_procEntryExit3(frame, iList);
   G_graph graph = FG_AssemFlowGraph(proc->body);
   fprintf(out, "\n>>>>>>> Flow Graph <<<<<<<<\n");
-  G_show(out, G_nodes(graph), (void (*)(FILE *out, void *, Temp_map)) FG_Showinfo);//(void (*)(void *))FG_Showinfo
+  G_show(out, G_nodes(graph), map, (void (*)(FILE *out, void *, Temp_map)) FG_Showinfo);//(void (*)(void *))FG_Showinfo
 
 }
 
@@ -79,7 +81,7 @@ int main(int argc, string *argv) {
     printf(">>>>>> End SEM_transProg. \n");
 
     /* 指令选择，生成编译文件 xxx.s */
-    printf(">>>>>> Start instruction choose. \n");
+    printf(">>>>>> 开始指令选择. \n");
     sprintf(outfile, "%s.s", argv[1]);
     out = fopen(outfile, "w");
     printf(">>>>>> 解析片段  frags... \n");
