@@ -81,7 +81,7 @@ G_graph FG_AssemFlowGraph(AS_instrList il) {
       TAB_enter(label_node_table, (void *) (inst->u.LABEL.label), (void *) (node));
     } else if (inst->kind == I_OPER && inst->u.OPER.jumps) { // 如果是跳转指令
       // 将跳转的目标 label 添加进图 (struct AS_targets_{ Temp_labelList labels; })
-      for (Temp_labelList l = inst->u.OPER.jumps; l != NULL; l = l->tail) {
+      for (Temp_labelList l = inst->u.OPER.jumps->labels; l != NULL; l = l->tail) {
         // 查找目标 label 节点
         G_node label_node = TAB_look(label_node_table, (void *) (l->head));
         // 添加 node->每一个 label 的边, 表示每个node 可能跳转到的 label
@@ -97,13 +97,12 @@ G_graph FG_AssemFlowGraph(AS_instrList il) {
   return fg;
 }
 
-
 void FG_Showinfo(FILE *out, AS_instr instr, Temp_map map){
 
   // ???
   char* code_str;  // 汇编语句
-  char* code_p;
-  char r[200];  // ???
+  char* code_p;  //
+  char r[200];  // 打印字符串
 
   switch (instr->kind) {
     case I_OPER:
