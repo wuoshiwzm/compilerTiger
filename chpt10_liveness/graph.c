@@ -1,6 +1,3 @@
-#ifndef _GRAPH_C_
-#define _GRAPH_C_
-
 /*
  * graph.c - Functions to manipulate and create control flow and
  *           interference graphs.
@@ -19,8 +16,8 @@
 #include "table.h"
 
 struct G_graph_ {int nodecount;
-		 G_nodeList mynodes, mylast;
-	       };
+  G_nodeList mynodes, mylast;
+};
 
 struct G_node_ {
   G_graph mygraph;
@@ -32,42 +29,42 @@ struct G_node_ {
 
 G_graph G_Graph(void)
 {G_graph g = (G_graph) checked_malloc(sizeof *g);
- g->nodecount = 0;
- g->mynodes = NULL;
- g->mylast = NULL;
- return g;
+  g->nodecount = 0;
+  g->mynodes = NULL;
+  g->mylast = NULL;
+  return g;
 }
 
 G_nodeList G_NodeList(G_node head, G_nodeList tail)
 {G_nodeList n = (G_nodeList) checked_malloc(sizeof *n);
- n->head=head;
- n->tail=tail;
- return n;
+  n->head=head;
+  n->tail=tail;
+  return n;
 }
 
 /* generic creation of G_node */
 G_node G_Node(G_graph g, void *info)
 {G_node n = (G_node)checked_malloc(sizeof *n);
- G_nodeList p = G_NodeList(n, NULL);
- assert(g);
- n->mygraph=g;
- n->mykey=g->nodecount++;
+  G_nodeList p = G_NodeList(n, NULL);
+  assert(g);
+  n->mygraph=g;
+  n->mykey=g->nodecount++;
 
- if (g->mylast==NULL)
-   g->mynodes=g->mylast=p;
- else g->mylast = g->mylast->tail = p;
+  if (g->mylast==NULL)
+    g->mynodes=g->mylast=p;
+  else g->mylast = g->mylast->tail = p;
 
- n->succs=NULL;
- n->preds=NULL;
- n->info=info;
- return n;
+  n->succs=NULL;
+  n->preds=NULL;
+  n->info=info;
+  return n;
 }
 
 G_nodeList G_nodes(G_graph g)
 {
   assert(g);
   return g->mynodes;
-} 
+}
 
 /* return true if a is in l list */
 bool G_inNodeList(G_node a, G_nodeList l) {
@@ -97,19 +94,19 @@ void G_rmEdge(G_node from, G_node to) {
   from->succs=delete(to,from->succs);
 }
 
- /**
-  * Print a human-readable dump for debugging.
-  */
-void G_show(FILE *out, G_nodeList p, void showInfo(void *)) {
+/**
+ * Print a human-readable dump for debugging.
+ */
+void G_show(FILE *out, G_nodeList p,Temp_map m, void showInfo(FILE *out, void *, Temp_map map)) {
   for (; p!=NULL; p=p->tail) {
     G_node n = p->head;
     G_nodeList q;
     assert(n);
-    if (showInfo) 
-      showInfo(n->info);
-    fprintf(out, " (%d): ", n->mykey); 
-    for(q=G_succ(n); q!=NULL; q=q->tail) 
-           fprintf(out, "%d ", q->head->mykey);
+    if (showInfo)
+      showInfo(out, n->info, m);
+    fprintf(out, " (%d): ", n->mykey);
+    for(q=G_succ(n); q!=NULL; q=q->tail)
+      fprintf(out, "%d ", q->head->mykey);
     fprintf(out, "\n");
   }
 }
@@ -133,7 +130,7 @@ static int inDegree(G_node n)
 /* return length of successor list for node n */
 static int outDegree(G_node n)
 { int deg = 0;
-  G_nodeList p; 
+  G_nodeList p;
   for(p=G_succ(n); p!=NULL; p=p->tail) deg++;
   return deg;
 }
@@ -146,7 +143,7 @@ static G_nodeList cat(G_nodeList a, G_nodeList b) {
   else return G_NodeList(a->head, cat(a->tail, b));
 }
 
-/* create the adjacency list for node n by combining the successor and 
+/* create the adjacency list for node n by combining the successor and
  * predecessor lists of node n */
 G_nodeList G_adj(G_node n) {return cat(G_succ(n), G_pred(n));}
 
@@ -170,4 +167,4 @@ void *G_look(G_table t, G_node node)
   return TAB_look(t, node);
 }
 
-#endif
+

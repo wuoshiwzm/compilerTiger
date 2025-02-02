@@ -3,11 +3,11 @@
 #include <string.h> /* for strcpy */
 #include "util.h"
 #include "table.h"
-#include "table.c"
+//#include "table.c"
 #include "symbol.h"
 #include "absyn.h"
 #include "temp.h"
-#include "temp.c"
+//#include "temp.c"
 #include "tree.h"
 #include "assem.h"
 #include "frame.h"
@@ -29,6 +29,9 @@ static Temp_tempList lookupLiveMap(G_table t, G_node flownode);
 Temp_tempList tempListMinus(Temp_tempList a, Temp_tempList b);
 
 Temp_tempList tempListUnion(Temp_tempList a, Temp_tempList b);
+
+int is_in_tempList(Temp_temp t, Temp_tempList list);
+int is_tempList_change(Temp_tempList t1, Temp_tempList t2);
 
 // 判断两个 出口/入口活跃表 是否相等
 // bool G_table_equal(G_table t1, G_table t2);
@@ -129,7 +132,7 @@ struct Live_graph Live_liveness(G_graph flow)
         Temp_tempList out1_n = lookupLiveMap(out1, n);
 
         // 只要有一个节点的 in, out 变化， 就要继续遍历, 不用再遍历其他节点
-        if (is_tempList_change(in1, in) || is_tempList_change(out1, out))
+        if (is_tempList_change(in1_n, in_n) == TRUE || is_tempList_change(out1_n, out_n))
         {
           stop = FALSE;
           loop = FALSE;
@@ -142,7 +145,7 @@ struct Live_graph Live_liveness(G_graph flow)
   // 更新后为最终的进/出口活跃表 int,
 }
 
-bool is_tempList_change(Temp_tempList t1, Temp_tempList t2)
+int is_tempList_change(Temp_tempList t1, Temp_tempList t2)
 {
   Temp_tempList tt1 = t1;
   Temp_tempList tt2 = t2;
@@ -192,7 +195,7 @@ Temp_tempList tempListMinus(Temp_tempList a, Temp_tempList b)
     t = ta->head;
 
     // 判断当前节点 Temp_temp t 是否在 Temp_tempList b 中，如果已经存在就不添加，不存在就添加
-    if (!is_in_tempList(t, b))
+    if (is_in_tempList(t, b) == FALSE)
     {
       res->head->num = t->num;
       new_tail = (Temp_tempList)checked_malloc(sizeof(struct Temp_tempList_));
@@ -207,7 +210,7 @@ Temp_tempList tempListMinus(Temp_tempList a, Temp_tempList b)
   return res;
 }
 
-bool is_in_tempList(Temp_temp t, Temp_tempList list)
+int is_in_tempList(Temp_temp t, Temp_tempList list)
 {
   bool res = FALSE;
   bool stop = FALSE;
@@ -251,7 +254,7 @@ Temp_tempList tempListUnion(Temp_tempList a, Temp_tempList b)
   // 添加 Temp_tempList b
   for (; tb; tb = tb->tail)
   {
-    if (!is_in_tempList(tb->head, res))
+    if (is_in_tempList(tb->head, res) == FALSE)
     {
       res->head = tb->head;
       if (tb->tail)
