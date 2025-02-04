@@ -84,6 +84,9 @@ of                  {adjust(); return OF;}
 break               {adjust(); return BREAK;}
 nil                 {adjust(); return NIL;}
 function            {adjust(); return FUNCTION;}
+class               {adjust(); return CLASS;}
+extends             {adjust(); return EXTENDS;}
+method              {adjust(); return METHOD;}
 var		    {adjust(); return VAR;}
 type	            {adjust(); return TYPE;}
 {id}                {adjust(); yylval.sval = yytext; return ID;}

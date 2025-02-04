@@ -168,7 +168,7 @@ struct A_dec_
 			bool escape;
 		} var;
 		A_nametyList type;
-		A_clsdecList cls;
+		A_clsdec cls;
 	} u;
 };
 
@@ -287,19 +287,23 @@ A_efieldList A_EfieldList(A_efield head, A_efieldList tail);
 
 
 // 面向对象 object tiger
-typedef struct A_clsdecList_ * A_clsdecList;
+
+
+/**
+dec 		→ classdec  
+classdec 	→ class class-id extends class-id { {classfield } }  
+classfield 	→ vardec  
+classfield 	→ method  
+method 		→ method id(tyfields) = exp  
+method 		→ method id(tyfields) : type-id = exp
+ */
 typedef struct A_clsdec_ * A_clsdec;
 typedef struct A_clsFieldList_ * A_clsFieldList;
 typedef struct A_clsField_ * A_clsField;
-typedef struct A_methoddec_ * A_methoddec;
 
 
 // 类定义
-struct A_clsdecList_
-{
-	A_clsdec head;
-	A_clsdecList tail;
-};
+
 struct A_clsdec_
 {
 	A_pos pos;
@@ -309,20 +313,8 @@ struct A_clsdec_
 };
 
 // 类属性 方法
-struct A_clsFieldList_
-{
-	A_clsField head;
-	A_clsFieldList tail;
-};
 
-struct A_methoddec_
-{
-	A_pos pos;
-	S_symbol name;
-	A_fieldList params;
-	S_symbol result;
-	A_exp body;
-};
+ 
 
 struct A_clsField_
 {
@@ -341,14 +333,29 @@ struct A_clsField_
 			A_exp init;
 			bool escape;
 		} var;
-		A_methoddec method;
+		struct {
+			A_pos pos;
+			S_symbol name;
+			A_fieldList params;
+			S_symbol result;
+			A_exp body;
+		} method;
 	} u;
 };
 
 
-A_dec A_ClassDec(A_pos pos, A_clsdecList class);
-A_clsdecList A_ClsdecList(A_clsdec head, A_clsdecList tail);
-A_clsdec A_Clsdec(A_pos pos, S_symbol name, S_symbol parentCls, A_clsFieldList fields);
+A_dec A_ClassDec(A_pos pos, A_clsdec class);
+A_clsdec A_Clsdec(A_pos pos, S_symbol name, S_symbol parent, A_clsFieldList fields);
+
+
+A_clsFieldList A_ClsFieldList(A_pos pos, A_clsField head, A_clsFieldList list);
+// 声明类属性
+A_clsField A_ClsVarField(A_pos, S_symbol var, S_symbol type, A_exp init);
+
+// 声明类方法
+A_clsField A_ClsMethod(A_pos pos, S_symbol name, A_fieldList params, S_symbol result, A_exp body);
+
+
 
 
 void printExp(A_exp exp);
