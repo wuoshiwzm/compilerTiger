@@ -22,7 +22,7 @@ extern A_exp absyn_root;
 
 /*
  *
- * 解析为抽象语法
+ * 解析为抽象语法树
  * parse source file fname;
    return abstract syntax data structure */
 A_exp parse(string fname) {
@@ -41,16 +41,19 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  printf("Start parsing %s >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", argv[1]);
+  printf("Start parsing %s ...\n", argv[1]);
 
-  // 抽象语法
-  A_exp temp = parse(argv[1]);
+  // 翻译成AST
+  A_exp ast = parse(argv[1]);
+
+  printf("End paring ... \n");
+  pr_exp(stdout, ast, 4);
+
 
   /* 类型检查 */
-  if (temp) {
-//        pr_exp(stdout, temp, 4);
-    F_fragList flist = SEM_transProg(temp);
+  // if (temp) {
+  //   F_fragList flist = SEM_transProg(temp);
 
-  }
+  // }
   return 0;
 }

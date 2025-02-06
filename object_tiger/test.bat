@@ -33,8 +33,13 @@ gcc -g -c myframe.c translate.c parse.c semant.c
 gcc -g parse.o tiger.tab.o lex.yy.o errormsg.o util.o table.o absyn.o symbol.o prabsyn.o types.o env.o semant.o temp.o tree.o printtree.o myframe.o translate.o
 
 echo "testing test file ..."
-a.exe ".\testfiles\test2.tig"
-a.exe ".\testfiles\compilable\array_equality.tig"
+
+@REM a.exe "..\testfiles\test.tig"
+a.exe ".\test_class.tig"
+
+
+@REM a.exe "..\testfiles\test2.tig"
+@REM a.exe "..\testfiles\compilable\array_equality.tig"
 
 @REM set "folder_path=testfiles\compilable"
 @REM for /R "%folder_path%" %%F in (*.tig) do (

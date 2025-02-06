@@ -1,9 +1,0 @@
-let
-  type person = {name:string, age:int}
-  var myrecord1: person := person {name="Bart", age=34}
-  var myrecord2 := person {name="Bart", age=34}
-  var abc := 12333
-in
-  myrecord2.age = myrecord1.age;
-  myrecord2 <> myrecord1;
-end

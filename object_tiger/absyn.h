@@ -27,6 +27,77 @@ typedef struct A_nametyList_ *A_nametyList;
 typedef struct A_efield_ *A_efield;
 typedef struct A_efieldList_ *A_efieldList;
 
+// 面向对象 object tiger
+
+
+/**
+dec 		→ classdec  
+classdec 	→ class class-id extends class-id { {classfield } }  
+classfield 	→ vardec  
+classfield 	→ method  
+method 		→ method id(tyfields) = exp  
+method 		→ method id(tyfields) : type-id = exp
+ */
+typedef struct A_clsdec_ * A_clsdec;
+typedef struct A_clsFieldList_ * A_clsFieldList;
+typedef struct A_clsField_ * A_clsField;
+
+
+// 类定义
+
+struct A_clsdec_
+{
+	A_pos pos;
+	S_symbol clsName;
+	S_symbol parentName;
+	A_clsFieldList fileds;
+};
+
+// 类属性 方法
+struct A_clsFieldList_
+{
+	A_clsField head;
+	A_clsFieldList tail;
+};
+
+struct A_clsField_
+{
+	A_pos pos;
+	enum
+	{
+		clsField,
+		clsMethod
+	} kind;
+
+	union
+	{
+		struct
+		{
+			S_symbol var;
+			S_symbol typ;
+			A_exp init;
+		} var;
+		struct {
+			S_symbol name;
+			A_fieldList params;
+			S_symbol result;
+			A_exp body;
+		} method;
+	} u;
+};
+
+A_dec A_ClassDec(A_pos pos, A_clsdec class);
+A_clsdec A_Clsdec(A_pos pos, S_symbol name, S_symbol parent, A_clsFieldList fields);
+// 类属性/方法
+A_clsFieldList A_ClsFieldList(A_clsField head, A_clsFieldList list);
+// 声明类属性
+A_clsField A_ClsVarField(A_pos pos,S_symbol var, S_symbol type, A_exp init);
+// 声明类方法
+A_clsField A_ClsMethod(A_pos pos,S_symbol name, A_fieldList params, S_symbol result, A_exp body);
+
+A_dec A_ObjDec(A_pos pos,  S_symbol var, S_symbol typ, S_symbol class);
+// A_dec A_VarDec(A_pos pos, S_symbol var, S_symbol typ, A_exp init);
+
 typedef enum
 {
 	A_plusOp,
@@ -153,7 +224,8 @@ struct A_dec_
 		A_functionDec,
 		A_varDec,
 		A_typeDec,
-		A_clsDec
+		A_clsDec,
+		A_obj
 	} kind;
 	A_pos pos;
 	union
@@ -167,6 +239,12 @@ struct A_dec_
 			A_exp init;
 			bool escape;
 		} var;
+		struct
+		{
+			S_symbol var;
+			S_symbol typ;
+			S_symbol class;
+		} obj;
 		A_nametyList type;
 		A_clsdec cls;
 	} u;
@@ -283,79 +361,6 @@ A_namety A_Namety(S_symbol name, A_ty ty);
 A_nametyList A_NametyList(A_namety head, A_nametyList tail);
 A_efield A_Efield(S_symbol name, A_exp exp);
 A_efieldList A_EfieldList(A_efield head, A_efieldList tail);
-
-
-
-// 面向对象 object tiger
-
-
-/**
-dec 		→ classdec  
-classdec 	→ class class-id extends class-id { {classfield } }  
-classfield 	→ vardec  
-classfield 	→ method  
-method 		→ method id(tyfields) = exp  
-method 		→ method id(tyfields) : type-id = exp
- */
-typedef struct A_clsdec_ * A_clsdec;
-typedef struct A_clsFieldList_ * A_clsFieldList;
-typedef struct A_clsField_ * A_clsField;
-
-
-// 类定义
-
-struct A_clsdec_
-{
-	A_pos pos;
-	S_symbol clsName;
-	S_symbol parentName;
-	A_clsFieldList fileds;
-};
-
-// 类属性 方法
-
- 
-
-struct A_clsField_
-{
-	enum
-	{
-		clsField,
-		clsMethod
-	} kind;
-
-	union
-	{
-		struct
-		{
-			S_symbol var;
-			S_symbol typ;
-			A_exp init;
-			bool escape;
-		} var;
-		struct {
-			A_pos pos;
-			S_symbol name;
-			A_fieldList params;
-			S_symbol result;
-			A_exp body;
-		} method;
-	} u;
-};
-
-
-A_dec A_ClassDec(A_pos pos, A_clsdec class);
-A_clsdec A_Clsdec(A_pos pos, S_symbol name, S_symbol parent, A_clsFieldList fields);
-
-
-A_clsFieldList A_ClsFieldList(A_pos pos, A_clsField head, A_clsFieldList list);
-// 声明类属性
-A_clsField A_ClsVarField(A_pos, S_symbol var, S_symbol type, A_exp init);
-
-// 声明类方法
-A_clsField A_ClsMethod(A_pos pos, S_symbol name, A_fieldList params, S_symbol result, A_exp body);
-
-
 
 
 void printExp(A_exp exp);

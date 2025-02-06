@@ -19,29 +19,29 @@ void yyerror(char *s)
 
 
 %union {
-	int		 ival;
-	string 		 sval;
-	A_var 		 var;
-   A_extend     extends
-	A_exp 		 exp;
-	A_dec 		 dec;
-	A_ty  		 ty;
-	A_decList 	 declist;
-	A_expList 	 expList;
-	A_fieldList	 fieldList;
+	int		      ival;
+	string 		   sval;
+	A_var 		   var;
+	A_exp 		   exp;
+	A_dec 		   dec;
+	A_ty  		   ty;
+	A_decList 	   declist;
+	A_expList 	   expList;
+	A_fieldList	   fieldList;
 	A_fundec	      fundec;
-	A_fundecList 	 fundecList;
+	A_fundecList   fundecList;
 	A_namety	      namety;
 	A_nametyList   nametyList;
-	A_efield	 efield;
-	A_efieldList	 efieldList;
-	S_symbol	 symbol;
+	A_efield	      efield;
+	A_efieldList   efieldList;
+	S_symbol	      symbol;
 
    // 面向对象
-   A_clsdec          classdec
-   A_clsFieldList  clsfieldList; 
-   A_clsField      A_clsfield;
-	}
+   A_clsdec       classdec;
+   A_clsFieldList clsfieldList; 
+   A_clsField     clsfield;
+
+}
 
 %token <sval> ID STRING
 %token <ival> INT
@@ -54,6 +54,7 @@ void yyerror(char *s)
   ARRAY IF THEN ELSE WHILE FOR TO DO LET IN END OF
   BREAK NIL
   FUNCTION VAR TYPE CLASS METHOD EXTENDS
+  NEW
 
 %type <symbol> 	   symbol
 %type <var>    	   lvalue
@@ -69,7 +70,7 @@ void yyerror(char *s)
 %type <efieldList>   refieldlist
 
 // object tiger 
-%type <classdec>     
+%type <classdec>     classdec
 %type <clsfieldList> clsfieldlist
 %type <clsfield>     clsfield
 
@@ -162,11 +163,36 @@ decs:		dec decs {$$ =A_DecList($1,$2);}
 
 dec:		tydecs {$$=$1;}
    | 		fundecs {$$=$1;}
-   | 		clsdec {$$=$1;}     
-   | 		VAR symbol ASSIGN exp {$$ =A_VarDec(EM_tokPos,$2,NULL,$4);}
+   | 		clsdec { $$=$1; } // 新建类
+   |     VAR symbol ASSIGN NEW symbol {$$ =A_ObjDec(EM_tokPos,$2,$4,$7);} // 新建对象
+   |     VAR symbol COLON symbol ASSIGN NEW symbol {$$ =A_ObjDec(EM_tokPos,$2,$4,$7);} // 新建对象
+   |     VAR symbol ASSIGN NEW symbol {$$ =A_ObjDec(EM_tokPos,$2,NULL,$5);}
+   | 		VAR symbol ASSIGN exp     { $$ =A_VarDec(EM_tokPos,$2,NULL,$4);}
    | 		VAR symbol COLON symbol ASSIGN exp {$$ =A_VarDec(EM_tokPos,$2,$4,$6);}
    ;
 
+// object_tiger
+clsdec:  classdec { $$=A_ClassDec(EM_tokPos, $1); }
+   ;
+
+classdec:   CLASS symbol LBRACE clsfieldlist RBRACE {$$=A_Clsdec(EM_tokPos,$2,NULL,$4);}
+   |     CLASS symbol EXTENDS symbol LBRACE clsfieldlist RBRACE {$$=A_Clsdec(EM_tokPos,$2,$4,$6);}
+   ;
+
+clsfieldlist: clsfield clsfieldlist {$$=A_ClsFieldList($1, $2);}
+   |     clsfield  {$$=A_ClsFieldList($1, NULL);}
+   ;
+
+// 类声明属性 及 方法
+clsfield:   VAR symbol ASSIGN exp {$$ =A_ClsVarField(EM_tokPos,$2,NULL,$4);}
+   |        VAR symbol COLON symbol ASSIGN exp {$$ =A_ClsVarField(EM_tokPos,$2,$4,$6);} 
+   |        METHOD symbol LPAREN tyfieldlist RPAREN EQ exp {$$ =A_ClsMethod(EM_tokPos,$2,$4,NULL,$7);}
+   |        METHOD symbol LPAREN tyfieldlist RPAREN COLON symbol EQ exp {$$ =A_ClsMethod(EM_tokPos,$2,$4,$7,$9);}
+   ;
+
+fundecs:	fundec fundecs {$$=A_FunctionDec(EM_tokPos,A_FundecList($1,$2->u.function));}
+   |		fundec {$$=A_FunctionDec(EM_tokPos,A_FundecList($1,NULL));}
+   ;
 
 tydecs:		tydec tydecs {$$ = A_TypeDec(EM_tokPos,A_NametyList($1,$2->u.type));}
    |	 	tydec {$$ = A_TypeDec(EM_tokPos,A_NametyList($1,NULL));}
@@ -186,9 +212,6 @@ tyfieldlist:	symbol COLON symbol COMMA tyfieldlist {$$ =A_FieldList(A_Field(EM_t
    ;
 
 
-fundecs:	fundec fundecs {$$=A_FunctionDec(EM_tokPos,A_FundecList($1,$2->u.function));}
-   |		fundec {$$=A_FunctionDec(EM_tokPos,A_FundecList($1,NULL));}
-   ;
 
 
 fundec:		FUNCTION symbol LPAREN tyfieldlist RPAREN EQ exp {$$ =A_Fundec(EM_tokPos,$2,$4,NULL,$7);}
@@ -204,22 +227,5 @@ tydec:		TYPE symbol EQ ty {$$ =A_Namety($2,$4);}
    ;
 
 
-// object_tiger
-clsdec:  classdec {$$=$1;}
-
-classdec:   CLASS symbol LBRACE clsfieldlist RBRACE {$$=A_Clsdec(EM_tokPos,$2,NULL,$4);}
-   |     CLASS symbol EXTENDS symbol LBRACE clsfieldlist RPAREN {$$=A_Clsdec(EM_tokPos,$2,$4,$6);}
-   ;
-
-clsfieldlist: clsfield clsfieldlist {$$=A_ClsFieldList(EM_tokPos, $1, $2);}
-   |     clsfield  {$$=A_ClsFieldList(EM_tokPos, $1, NULL);}
-   ;
-
-// 类声明属性 及 方法
-clsfield:   VAR symbol ASSIGN exp {$$ =A_ClsVarField(EM_tokPos,$2,NULL,$4);}
-   |        VAR symbol COLON symbol ASSIGN exp {$$ =A_ClsVarField(EM_tokPos,$2,$4,$6);} 
-   |        METHOD symbol LPAREN tyfieldlist RPAREN EQ exp {$$ =A_ClsMethod(EM_tokPos,$2,$4,NULL,$7);}
-   |        METHOD symbol LPAREN tyfieldlist RPAREN COLON symbol EQ exp{$$ =A_ClsMethod(EM_tokPos,$2,$4,$7,$9);}
-   ;
 
 

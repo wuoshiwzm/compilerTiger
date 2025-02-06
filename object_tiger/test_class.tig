@@ -1,0 +1,19 @@
+let
+    var start := 10
+
+    class A {
+        var val1 : int  := 13
+        var val2 := "abc"
+        var val2 := "abc"
+        method mm(x:int) = print("abc")
+    }
+
+    class B {
+        var val1 := 13
+        var val2 := "abc"
+    }
+in
+
+end
+
+ 

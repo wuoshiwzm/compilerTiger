@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"typeinfo": "cpp",
+			"type_traits": "cpp",
+			"cmath": "cpp",
+			"absyn.h": "c"
+		}
+	}
+}
