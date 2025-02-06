@@ -1,0 +1,4 @@
+class a extends Object {
+  var val1 := 13
+  var val2 := "abc"
+}

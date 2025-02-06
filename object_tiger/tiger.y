@@ -163,11 +163,10 @@ decs:		dec decs {$$ =A_DecList($1,$2);}
 
 dec:		tydecs {$$=$1;}
    | 		fundecs {$$=$1;}
-   | 		clsdec { $$=$1; } // 新建类
-   |     VAR symbol ASSIGN NEW symbol {$$ =A_ObjDec(EM_tokPos,$2,$4,$7);} // 新建对象
+   | 		clsdec { $$=$1; } // 新建类 
    |     VAR symbol COLON symbol ASSIGN NEW symbol {$$ =A_ObjDec(EM_tokPos,$2,$4,$7);} // 新建对象
-   |     VAR symbol ASSIGN NEW symbol {$$ =A_ObjDec(EM_tokPos,$2,NULL,$5);}
-   | 		VAR symbol ASSIGN exp     { $$ =A_VarDec(EM_tokPos,$2,NULL,$4);}
+   |     VAR symbol ASSIGN NEW symbol {$$ =A_ObjDec(EM_tokPos,$2,NULL,$5);} // 新建对象
+   | 		VAR symbol ASSIGN exp  { $$ =A_VarDec(EM_tokPos,$2,NULL,$4);}
    | 		VAR symbol COLON symbol ASSIGN exp {$$ =A_VarDec(EM_tokPos,$2,$4,$6);}
    ;
 

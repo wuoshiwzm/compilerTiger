@@ -42,9 +42,7 @@ typedef struct A_clsdec_ * A_clsdec;
 typedef struct A_clsFieldList_ * A_clsFieldList;
 typedef struct A_clsField_ * A_clsField;
 
-
 // 类定义
-
 struct A_clsdec_
 {
 	A_pos pos;
@@ -225,7 +223,7 @@ struct A_dec_
 		A_varDec,
 		A_typeDec,
 		A_clsDec,
-		A_obj
+		A_objDec
 	} kind;
 	A_pos pos;
 	union

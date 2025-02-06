@@ -50,10 +50,9 @@ int main(int argc, char **argv) {
   pr_exp(stdout, ast, 4);
 
 
-  /* 类型检查 */
+  /* 类型检查 生成片段 */
   // if (temp) {
   //   F_fragList flist = SEM_transProg(temp);
-
   // }
   return 0;
 }

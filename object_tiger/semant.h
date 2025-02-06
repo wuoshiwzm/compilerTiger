@@ -10,6 +10,13 @@ F_fragList SEM_transProg(A_exp exp);
 static S_table E_base_tenv(void);  /* 类型环境 Ty_ ty environment */
 static S_table E_base_venv(void);  /* 值环境  E_ enventry environment */
 
+// 类描述字： 每个类都自带类描述字，
+// Object : 全局唯一基类
+// self: 
+static S_table E_classenv(); /* 全局类表 */
+static S_table E_objenv();  /* 全局对象表 */
+
+
 
 /* 将变量 转义成表达式类型 */
 static struct expty transVar(Tr_level level, S_table venv, S_table tenv, A_var v);

@@ -476,7 +476,7 @@ A_clsField A_ClsMethod(A_pos pos, S_symbol name, A_fieldList params, S_symbol re
 A_dec A_ObjDec(A_pos pos,  S_symbol var, S_symbol typ, S_symbol class)
 {
     A_dec p = checked_malloc(sizeof(*p));
-    p->kind = A_obj;
+    p->kind = A_objDec;
     p->pos = pos;
     p->u.obj.var = var;
     p->u.obj.typ = typ;

@@ -12,6 +12,8 @@ let
         var val1 := 13
         var val2 := "abc"
     }
+
+    var aa := new A
 in
 
 end
