@@ -41,13 +41,11 @@ struct T_clsfieldList_ {
     T_clsfieldList tail;
 }
 
-
 // 全局唯一 Object 基类
 T_cls ObjectCls = checked_malloc(sizeof(*ObjectCls));
 ObjectCls.name = S_Symbol("Object");
 ObjectCls.methods = NULL;
 ObjectCls.fields = NULL;
-
 
 typedef struct T_stm_ *T_stm;
 typedef struct T_exp_ *T_exp;
