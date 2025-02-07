@@ -1,6 +1,53 @@
 #ifndef COMPILER_TIGER_TREE_H
 #define COMPILER_TIGER_TREE_H
 
+// object tiger 面向对象
+// 类
+typedef struct T_cls_ * T_cls;
+// 对象
+typedef struct T_obj_ * T_obj;
+// 类方法
+typedef struct T_clsmethod_ * T_clsmethod;
+typedef struct T_clsmethodList_ * T_clsmethodList;
+// 类属性
+typedef struct T_clsfield_ * T_clsfield;
+typedef struct T_clsfieldList_ * T_clsfieldList;
+// 类描述字
+typedef struct T_clsdesc_ * T_clsdesc;
+typedef struct T_clsdescList_ * T_clsdescList;
+
+struct T_cls_ {
+	S_symbol name; 			// 类名
+	T_clsdescList descs;	// 类描述字
+	T_clsmethodList methods;	// 类方法
+	T_clsfieldList fields;	// 类属性
+};
+
+struct T_clsmethod_ {
+
+}
+
+struct T_clsmethodList_ {
+	T_clsmethod head;
+    T_clsmethodList tail;
+}
+
+struct T_clsfield_ {
+
+};
+
+struct T_clsfieldList_ {
+	T_clsfield head;
+    T_clsfieldList tail;
+}
+
+
+// 全局唯一 Object 基类
+T_cls ObjectCls = checked_malloc(sizeof(*ObjectCls));
+ObjectCls.name = S_Symbol("Object");
+ObjectCls.methods = NULL;
+ObjectCls.fields = NULL;
+
 
 typedef struct T_stm_ *T_stm;
 typedef struct T_exp_ *T_exp;
