@@ -1,5 +1,3 @@
-#ifndef _SYMBOL_H_
-#define _SYMBOL_H_
 /**
     符号类
 */
@@ -26,5 +24,3 @@ void S_beginScope(S_table t);
 void S_endScope(S_table t);
 
 void S_show(S_table);
-
-#endif

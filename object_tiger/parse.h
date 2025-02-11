@@ -2,8 +2,10 @@
 #define _PARSE_H_
 
 
-/* 编译  function prototype from parse.c */
-A_exp parse(string fname);
+/* function prototype from prabsyn.c */
+void pr_exp(FILE *out, A_exp v, int d);
+void S_distable();
+
 
 
 #endif

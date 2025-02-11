@@ -26,9 +26,6 @@ static void pr_namety(FILE *out, A_namety v, int d);
 static void pr_nametyList(FILE *out, A_nametyList v, int d);
 static void pr_efield(FILE *out, A_efield v, int d);
 static void pr_efieldList(FILE *out, A_efieldList v, int d);
-static void pr_clsdec(FILE *out, A_clsdec v, int d);
-static void pr_clsfieldList(FILE *out, A_clsFieldList v, int d);
-static void pr_clsfield(FILE *out, A_clsField v, int d);
 
 static void indent(FILE *out, int d) {
     int i;
@@ -75,6 +72,9 @@ void pr_exp(FILE *out, A_exp v, int d) {
             break;
         case A_nilExp:
             fprintf(out, "nilExp()");
+            break;
+        case A_doubleExp:
+            fprintf(out, "doubleExp()");
             break;
         case A_intExp:
             fprintf(out, "intExp(%d)", v->u.intt);
@@ -178,16 +178,6 @@ static void pr_dec(FILE *out, A_dec v, int d) {
         case A_typeDec:
             fprintf(out, "typeDec(\n");
             pr_nametyList(out, v->u.type, d+1); fprintf(out, ")");
-            break;
-        case A_clsDec:
-            fprintf(out, "classDec(\n");
-            pr_clsdec(out, v->u.cls, d+1); fprintf(out, ")");
-            break;
-        case A_objDec:
-            printf(" objectDec(  \n");
-            indent(out, d+1);
-            fprintf(out, "obj %s (", S_name(v->u.obj.class));
-            fprintf(out, ")");
             break;
         default:
             assert(0);
@@ -306,45 +296,4 @@ static void pr_efieldList(FILE *out, A_efieldList v, int d) {
         pr_efieldList(out, v->tail, d+1); fprintf(out, ")");
     }
     else fprintf(out, "efieldList()");
-}
-
-
-// object tiger
-static void pr_clsdec(FILE *out, A_clsdec v, int d) {
-    indent(out, d);
-    fprintf(out, "classdec %s (\n", S_name(v->clsName));
-    pr_clsfieldList(out, v->fileds, d+1);
-    fprintf(out, ")");
-}
-
-static void pr_objdec(FILE *out, A_clsdec v, int d) {
-    indent(out, d);
-    fprintf(out, "obj %s (\n", S_name(v->clsName));
-    fprintf(out, ")");
-}
-
-static void pr_clsfieldList(FILE *out, A_clsFieldList v, int d){
-    indent(out, d);
-    if (v)
-    {
-        fprintf(out, " A_clsFieldList  ( \n");
-        // 类属性
-        pr_clsfield(out, v->head, d+1);
-        // 类方法
-        pr_clsfieldList(out, v->tail, d+1); fprintf(out, ")");
-    }else fprintf(out, "A_clsFieldList()");
-}
-
-static void pr_clsfield(FILE *out, A_clsField v, int d){
-    indent(out, d);
-    if (v)
-    {
-        if (v->kind == clsField){ 
-            // 类属性
-            fprintf(out, "field:  %s \n", S_name(v->u.var.var));;
-        }else{
-            // 类方法
-            fprintf(out, "method: %s \n", S_name(v->u.method.name));
-        }
-    }else fprintf(out, "A_clsField()");
 }
