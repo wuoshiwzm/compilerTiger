@@ -10,18 +10,25 @@
 #include "symbol.h"
 #include "types.h"
 
+/* 空 type */
 static struct Ty_ty_ tynil = {Ty_nil};
 Ty_ty Ty_Nil(void) {return &tynil;}
 
+/* int type */
 static struct Ty_ty_ tyint = {Ty_int};
 Ty_ty Ty_Int(void) {return &tyint;}
 
+static struct Ty_ty_ tydouble = {Ty_double};
+Ty_ty Ty_Double(void) {return &tydouble;}
 static struct Ty_ty_ tystring = {Ty_string};
 Ty_ty Ty_String(void) {return &tystring;}
+
+
 
 static struct Ty_ty_ tyvoid = {Ty_void};
 Ty_ty Ty_Void(void) {return &tyvoid;}
 
+/* 将类型域 fields 添加到环境中 */
 Ty_ty Ty_Record(Ty_fieldList fields)
 {Ty_ty p = checked_malloc(sizeof(*p));
  p->kind=Ty_record;
@@ -58,6 +65,7 @@ Ty_field Ty_Field(S_symbol name, Ty_ty ty)
  p->ty=ty;
  return p;
 }
+
 
 Ty_fieldList Ty_FieldList(Ty_field head, Ty_fieldList tail)
 {Ty_fieldList p = checked_malloc(sizeof(*p));
