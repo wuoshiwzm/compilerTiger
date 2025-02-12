@@ -19,18 +19,18 @@ gcc -g -c util.c
 gcc -g -c symbol.c
 gcc -g -c types.c
 gcc -g -c absyn.c
-gcc -g -c temp.c
-gcc -g -c tree.c
+@REM gcc -g -c temp.c
+@REM gcc -g -c tree.c
 gcc -g -c table.c
 gcc -g -c env.c
 
 gcc -g -c errormsg.c
 gcc -g -c prabsyn.c
-gcc -g -c printtree.c
+@REM gcc -g -c printtree.c
 
 
-gcc -g -c myframe.c translate.c parse.c semant.c
-gcc -g parse.o tiger.tab.o lex.yy.o errormsg.o util.o table.o absyn.o symbol.o prabsyn.o types.o env.o semant.o temp.o tree.o printtree.o myframe.o translate.o
+gcc -g -c types.c parse.c semant.c
+gcc -g parse.o tiger.tab.o lex.yy.o errormsg.o util.o table.o absyn.o symbol.o prabsyn.o types.o env.o semant.o
 
 echo "testing test file ..."
 
