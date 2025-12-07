@@ -17,3 +17,7 @@ E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result);
 
 S_table E_base_tenv(void);  /* 类型环境 Ty_ ty environment */
 S_table E_base_venv(void);  /* 值环境  E_ enventry environment */
+
+
+static S_table E_classenv(); /* 全局类表 */
+static S_table E_objenv();  /* 全局对象表 */
